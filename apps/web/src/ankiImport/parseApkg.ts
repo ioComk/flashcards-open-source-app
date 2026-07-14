@@ -4,19 +4,33 @@ import sqlWasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 
 const fieldSeparator = "\u001f";
 
+export type ParsedApkgField = Readonly<{
+  name: string;
+  value: string;
+}>;
+
 export type ParsedApkgNote = Readonly<{
   noteId: string;
-  frontText: string;
-  backText: string;
-  tags: ReadonlyArray<string>;
+  modelId: string;
   modelName: string;
+  modelType: number;
   deckName: string;
+  tags: ReadonlyArray<string>;
+  fields: ReadonlyArray<ParsedApkgField>;
+}>;
+
+export type ParsedApkgModel = Readonly<{
+  id: string;
+  name: string;
+  type: number;
+  fieldNames: ReadonlyArray<string>;
+  noteCount: number;
 }>;
 
 export type ParsedApkgDeck = Readonly<{
   notes: ReadonlyArray<ParsedApkgNote>;
-  skippedClozeCount: number;
-  skippedEmptyCount: number;
+  models: ReadonlyArray<ParsedApkgModel>;
+  clozeNoteCount: number;
   sourceFileName: string;
 }>;
 
@@ -144,64 +158,6 @@ function parseDecks(rawDecks: string): ReadonlyMap<string, AnkiDeck> {
   return decks;
 }
 
-function normalizeFieldName(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-function pickFrontBack(
-  fields: ReadonlyArray<string>,
-  modelFields: ReadonlyArray<AnkiModelField>,
-): Readonly<{ frontText: string; backText: string }> | null {
-  const valuesByName = new Map<string, string>();
-  for (const modelField of modelFields) {
-    const value = fields[modelField.ord] ?? "";
-    valuesByName.set(normalizeFieldName(modelField.name), value);
-  }
-
-  const frontCandidates = ["front", "question", "expression", "word", "term", "prompt"];
-  const backCandidates = ["back", "answer", "meaning", "definition", "reading", "translation"];
-
-  let frontText = "";
-  for (const candidate of frontCandidates) {
-    const value = valuesByName.get(candidate);
-    if (value !== undefined && value !== "") {
-      frontText = value;
-      break;
-    }
-  }
-
-  let backText = "";
-  for (const candidate of backCandidates) {
-    const value = valuesByName.get(candidate);
-    if (value !== undefined && value !== "") {
-      backText = value;
-      break;
-    }
-  }
-
-  if (frontText === "" && fields[0] !== undefined) {
-    frontText = fields[0];
-  }
-
-  if (backText === "" && fields[1] !== undefined) {
-    backText = fields[1];
-  }
-
-  if (frontText === "" && backText === "") {
-    return null;
-  }
-
-  if (frontText === "") {
-    frontText = backText;
-  }
-
-  if (backText === "") {
-    backText = frontText;
-  }
-
-  return { frontText, backText };
-}
-
 function queryCollectionDatabase(database: Database): {
   models: ReadonlyMap<string, AnkiModel>;
   decks: ReadonlyMap<string, AnkiDeck>;
@@ -250,6 +206,23 @@ function isCompatibilityStubCollection(database: Database): boolean {
   return flds.toLowerCase().includes("please update to the latest anki version");
 }
 
+function buildNamedFields(
+  values: ReadonlyArray<string>,
+  modelFields: ReadonlyArray<AnkiModelField>,
+): ReadonlyArray<ParsedApkgField> {
+  if (modelFields.length === 0) {
+    return values.map((value, index) => ({
+      name: `Field ${index + 1}`,
+      value,
+    }));
+  }
+
+  return modelFields.map((modelField) => ({
+    name: modelField.name,
+    value: values[modelField.ord] ?? "",
+  }));
+}
+
 export async function parseApkgFile(file: File): Promise<ParsedApkgDeck> {
   const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const fileNames = Object.keys(zip.files);
@@ -276,49 +249,72 @@ export async function parseApkgFile(file: File): Promise<ParsedApkgDeck> {
     );
 
     const notes: Array<ParsedApkgNote> = [];
-    let skippedClozeCount = 0;
-    let skippedEmptyCount = 0;
+    let clozeNoteCount = 0;
+    const noteCountByModelId = new Map<string, number>();
 
     if (notesResult.length > 0) {
       for (const row of notesResult[0].values) {
         const noteId = String(row[0] ?? "");
         const modelId = String(row[1] ?? "");
         const tags = parseTags(String(row[2] ?? ""));
-        const fields = splitFields(String(row[3] ?? ""));
+        const values = splitFields(String(row[3] ?? ""));
         const deckId = String(row[4] ?? "");
         const model = models.get(modelId);
+        const modelName = model?.name ?? "Unknown";
+        const modelType = model?.type ?? 0;
         const deckName = decks.get(deckId)?.name ?? "Anki";
+        const fields = buildNamedFields(values, model?.fields ?? []);
 
-        if (model?.type === 1) {
-          skippedClozeCount += 1;
+        if (fields.every((field) => field.value === "")) {
           continue;
         }
 
-        const mapped = pickFrontBack(fields, model?.fields ?? []);
-        if (mapped === null) {
-          skippedEmptyCount += 1;
-          continue;
+        if (modelType === 1) {
+          clozeNoteCount += 1;
         }
 
+        noteCountByModelId.set(modelId, (noteCountByModelId.get(modelId) ?? 0) + 1);
         notes.push({
           noteId,
-          frontText: mapped.frontText,
-          backText: mapped.backText,
-          tags,
-          modelName: model?.name ?? "Basic",
+          modelId,
+          modelName,
+          modelType,
           deckName,
+          tags,
+          fields,
         });
       }
     }
 
     if (notes.length === 0) {
-      throw new Error("No importable Basic notes were found in this .apkg file.");
+      throw new Error("No importable notes were found in this .apkg file.");
     }
+
+    const usedModelIds = new Set(notes.map((note) => note.modelId));
+    const parsedModels: ReadonlyArray<ParsedApkgModel> = [...usedModelIds]
+      .map((modelId) => {
+        const model = models.get(modelId);
+        const fieldNamesFromModel = (model?.fields ?? []).map((field) => field.name);
+        const sampleNote = notes.find((note) => note.modelId === modelId);
+        const fieldNames =
+          fieldNamesFromModel.length > 0
+            ? fieldNamesFromModel
+            : (sampleNote?.fields.map((field) => field.name) ?? []);
+
+        return {
+          id: modelId,
+          name: model?.name ?? "Unknown",
+          type: model?.type ?? 0,
+          fieldNames,
+          noteCount: noteCountByModelId.get(modelId) ?? 0,
+        };
+      })
+      .sort((left, right) => left.name.localeCompare(right.name));
 
     return {
       notes,
-      skippedClozeCount,
-      skippedEmptyCount,
+      models: parsedModels,
+      clozeNoteCount,
       sourceFileName: file.name,
     };
   } finally {

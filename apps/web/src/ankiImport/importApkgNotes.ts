@@ -1,4 +1,6 @@
 import type { CreateCardInput, CreateDeckInput } from "../types";
+import type { ApkgFieldMapping } from "./fieldMapping";
+import { applyFieldMapping, mappingIsValid, saveFieldMappings } from "./fieldMapping";
 import type { ParsedApkgDeck, ParsedApkgNote } from "./parseApkg";
 
 export type ApkgImportProgress = Readonly<{
@@ -8,8 +10,9 @@ export type ApkgImportProgress = Readonly<{
 
 export type ApkgImportResult = Readonly<{
   importedCount: number;
-  skippedClozeCount: number;
   skippedEmptyCount: number;
+  skippedUnmappedCount: number;
+  clozeNoteCount: number;
   deckName: string;
   importTag: string;
 }>;
@@ -48,15 +51,25 @@ function buildCardTags(note: ParsedApkgNote, importTag: string): ReadonlyArray<s
     }
   }
 
+  if (note.modelType === 1) {
+    tags.add("cloze");
+  }
+
+  const modelTag = sanitizeTagSegment(note.modelName);
+  if (modelTag !== "") {
+    tags.add(`model:${modelTag}`);
+  }
+
   return [...tags];
 }
 
-function toCreateCardInput(note: ParsedApkgNote, importTag: string): CreateCardInput {
-  return {
-    frontText: note.frontText,
-    backText: note.backText,
-    tags: buildCardTags(note, importTag),
-  };
+function truncate(value: string, max: number): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= max) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, max - 1)}…`;
 }
 
 export function buildApkgDeckInput(deckName: string, importTag: string): CreateDeckInput {
@@ -72,6 +85,7 @@ export function buildApkgDeckInput(deckName: string, importTag: string): CreateD
 
 export async function importParsedApkgNotes(params: Readonly<{
   parsed: ParsedApkgDeck;
+  mappings: ReadonlyArray<ApkgFieldMapping>;
   createCardItem: (input: CreateCardInput) => Promise<unknown>;
   createDeckItem: (input: CreateDeckInput) => Promise<unknown>;
   onProgress?: (progress: ApkgImportProgress) => void;
@@ -79,14 +93,42 @@ export async function importParsedApkgNotes(params: Readonly<{
   const importedAt = new Date();
   const importTag = buildApkgImportTag(params.parsed.sourceFileName, importedAt);
   const primaryDeckName = params.parsed.notes[0]?.deckName ?? "Anki import";
+  const mappingByModelId = new Map(params.mappings.map((mapping) => [mapping.modelId, mapping]));
 
   await params.createDeckItem(buildApkgDeckInput(primaryDeckName, importTag));
+  saveFieldMappings(params.mappings);
 
   let importedCount = 0;
+  let skippedEmptyCount = 0;
+  let skippedUnmappedCount = 0;
   const totalCount = params.parsed.notes.length;
 
   for (const note of params.parsed.notes) {
-    await params.createCardItem(toCreateCardInput(note, importTag));
+    const mapping = mappingByModelId.get(note.modelId);
+    if (mapping === undefined || mappingIsValid(mapping) === false) {
+      skippedUnmappedCount += 1;
+      params.onProgress?.({
+        importedCount,
+        totalCount,
+      });
+      continue;
+    }
+
+    const mapped = applyFieldMapping(note, mapping);
+    if (mapped.frontText === "") {
+      skippedEmptyCount += 1;
+      params.onProgress?.({
+        importedCount,
+        totalCount,
+      });
+      continue;
+    }
+
+    await params.createCardItem({
+      frontText: truncate(mapped.frontText, 20_000),
+      backText: truncate(mapped.backText, 20_000),
+      tags: buildCardTags(note, importTag),
+    });
     importedCount += 1;
     params.onProgress?.({
       importedCount,
@@ -96,8 +138,9 @@ export async function importParsedApkgNotes(params: Readonly<{
 
   return {
     importedCount,
-    skippedClozeCount: params.parsed.skippedClozeCount,
-    skippedEmptyCount: params.parsed.skippedEmptyCount,
+    skippedEmptyCount,
+    skippedUnmappedCount,
+    clozeNoteCount: params.parsed.clozeNoteCount,
     deckName: deckLeafName(primaryDeckName),
     importTag,
   };
