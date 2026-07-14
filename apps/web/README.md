@@ -64,6 +64,31 @@ Follow the patterns already present:
 
 If you are unsure how something is done, read two or three existing screens or hooks first. The answer is almost always already there.
 
+## Vercel frontend clone (optional)
+
+This package can be deployed to Vercel as a static SPA clone of the web UI.
+
+Important limitation: the official hosted API/auth allow only
+`https://app.flashcards-open-source-app.com` (plus local localhost). A Vercel
+origin is not on that allowlist, so login, cookie session, CORS, and sync against
+the official backend will not work from a Vercel deploy. Use this path to host
+the UI clone; full cloud behavior needs your own backend allowlist, or a later
+local-only mode.
+
+Setup:
+
+1. In Vercel, import this Git repository.
+2. Set the project Root Directory to `apps/web`.
+3. Copy the Vercel-oriented values from [`.env.example`](./.env.example) into the
+   Vercel project Environment Variables.
+4. Set `VITE_API_BASE_URL` and `VITE_AUTH_BASE_URL` to the official hosts if you
+   want a UI clone pointed at the reference deployment.
+5. After the first deploy URL exists, set `VITE_APP_BASE_URL` to that origin and
+   redeploy.
+6. Keep Node on `24.x` (see `package.json` `engines`).
+
+`vercel.json` in this directory configures the Vite build output and SPA fallback.
+
 ## CI/CD
 
 Web build and deploy details are documented in [`docs/backend-web-deployment.md`](../../docs/backend-web-deployment.md).
