@@ -85,7 +85,7 @@
     padding: 12px;
   }
 
-  .rating-bar {
-    grid-template-columns: 1fr;
+  .review-actions-dock {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
