@@ -483,6 +483,18 @@ const esEsCatalog: TranslationCatalog = {
       localData: "La caché local mantiene tarjetas, mazos, ajustes del programador y operaciones de sincronización pendientes en este dispositivo.",
     },
   },
+  ankiImport: {
+    settingsTitle: "Importar .apkg de Anki",
+    settingsDescription: "Crea tarjetas desde un paquete de mazo de Anki. Se importan notas Basic; las cloze se omiten por ahora.",
+    settingsValue: "Elegir archivo",
+    parsing: "Leyendo .apkg…",
+    importing: "Importando {{count}} notas…",
+    progress: "Importadas {{imported}} / {{total}}",
+    success: "Se importaron {{imported}} tarjetas al mazo “{{deck}}”. Cloze omitidas: {{skippedCloze}}. Vacías omitidas: {{skippedEmpty}}.",
+    failed: "No se pudo importar el archivo .apkg.",
+    invalidFile: "Elige un archivo .apkg.",
+    workspaceUnavailable: "El espacio de trabajo no está disponible.",
+  },
   localBackup: {
     bannerTitle: "Copia de seguridad lista",
     bannerBody: "Guarda una copia JSON en Archivos o Descargas. El iPhone no puede guardar archivos en silencio; se necesita un toque.",

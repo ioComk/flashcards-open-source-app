@@ -483,6 +483,18 @@ export const zhHansCatalog = {
       localData: "本地缓存会在此设备上保留卡片、牌组、调度器设置和待同步操作。",
     },
   },
+  ankiImport: {
+    settingsTitle: "导入 Anki .apkg",
+    settingsDescription: "从 Anki 牌组包创建卡片。会导入 Basic 笔记；Cloze 暂不支持。",
+    settingsValue: "选择文件",
+    parsing: "正在读取 .apkg…",
+    importing: "正在导入 {{count}} 条笔记…",
+    progress: "已导入 {{imported}} / {{total}}",
+    success: "已将 {{imported}} 张卡片导入牌组“{{deck}}”。跳过 Cloze：{{skippedCloze}}。跳过空笔记：{{skippedEmpty}}。",
+    failed: "无法导入 .apkg 文件。",
+    invalidFile: "请选择 .apkg 文件。",
+    workspaceUnavailable: "工作区不可用。",
+  },
   localBackup: {
     bannerTitle: "备份已就绪",
     bannerBody: "可将 JSON 备份保存到“文件”或下载。iPhone 无法静默写入文件，需要点按一次。",

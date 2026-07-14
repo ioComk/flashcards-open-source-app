@@ -483,6 +483,18 @@ const deCatalog: TranslationCatalog = {
       localData: "Der lokale Cache speichert Karten, Decks, Planereinstellungen und ausstehende Synchronisierungsvorgänge auf diesem Gerät.",
     },
   },
+  ankiImport: {
+    settingsTitle: "Anki-.apkg importieren",
+    settingsDescription: "Erstellt Karten aus einem Anki-Deck-Paket. Basic-Notizen werden importiert; Cloze wird vorerst übersprungen.",
+    settingsValue: "Datei wählen",
+    parsing: ".apkg wird gelesen…",
+    importing: "{{count}} Notizen werden importiert…",
+    progress: "{{imported}} / {{total}} importiert",
+    success: "{{imported}} Karten in Deck „{{deck}}“ importiert. Cloze übersprungen: {{skippedCloze}}. Leer übersprungen: {{skippedEmpty}}.",
+    failed: "Die .apkg-Datei konnte nicht importiert werden.",
+    invalidFile: "Bitte eine .apkg-Datei wählen.",
+    workspaceUnavailable: "Arbeitsbereich ist nicht verfügbar.",
+  },
   localBackup: {
     bannerTitle: "Backup bereit",
     bannerBody: "Speichere ein JSON-Backup in Dateien oder Downloads. Das iPhone kann Dateien nicht still speichern – ein Tippen ist nötig.",

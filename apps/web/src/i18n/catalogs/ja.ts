@@ -483,6 +483,18 @@ export const jaCatalog = {
       localData: "ローカルキャッシュには、このデバイス上のカード、デッキ、スケジューラー設定、保留中の同期操作が保存されます。",
     },
   },
+  ankiImport: {
+    settingsTitle: "Anki の .apkg をインポート",
+    settingsDescription: "Ankiデッキパッケージからカードを作成します。Basicノートを取り込み、Clozeノートは当面スキップします。",
+    settingsValue: "ファイルを選択",
+    parsing: ".apkg を読み込み中…",
+    importing: "{{count}} 件のノートをインポート中…",
+    progress: "{{imported}} / {{total}} 件をインポート済み",
+    success: "デッキ「{{deck}}」に {{imported}} 枚のカードをインポートしました。スキップ（Cloze）: {{skippedCloze}}。スキップ（空）: {{skippedEmpty}}。",
+    failed: ".apkg をインポートできませんでした。",
+    invalidFile: ".apkg ファイルを選んでください。",
+    workspaceUnavailable: "ワークスペースを利用できません。",
+  },
   localBackup: {
     bannerTitle: "バックアップの準備ができました",
     bannerBody: "JSONバックアップを「ファイル」やダウンロードへ保存できます。iPhoneでは無操作での自動保存ができないため、タップが必要です。",

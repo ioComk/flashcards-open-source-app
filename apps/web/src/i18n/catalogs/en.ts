@@ -481,6 +481,18 @@ const enCatalog = {
       localData: "The local cache keeps cards, decks, scheduler settings, and pending sync operations on this device.",
     },
   },
+  ankiImport: {
+    settingsTitle: "Import Anki .apkg",
+    settingsDescription: "Create cards from an Anki deck package. Basic notes are imported; cloze notes are skipped for now.",
+    settingsValue: "Choose file",
+    parsing: "Reading .apkg…",
+    importing: "Importing {{count}} notes…",
+    progress: "Imported {{imported}} / {{total}}",
+    success: "Imported {{imported}} cards into deck “{{deck}}”. Skipped cloze: {{skippedCloze}}. Skipped empty: {{skippedEmpty}}.",
+    failed: "Could not import the .apkg file.",
+    invalidFile: "Please choose an .apkg file.",
+    workspaceUnavailable: "Workspace is unavailable.",
+  },
   localBackup: {
     bannerTitle: "Backup ready",
     bannerBody: "Save a JSON backup to Files or Downloads. iPhone cannot write files silently, so one tap is required.",

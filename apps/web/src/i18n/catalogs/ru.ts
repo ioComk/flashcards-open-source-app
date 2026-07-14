@@ -483,6 +483,18 @@ export const ruCatalog = {
       localData: "Локальный кэш хранит карточки, колоды, настройки планировщика и ожидающие операции синхронизации на этом устройстве.",
     },
   },
+  ankiImport: {
+    settingsTitle: "Импорт Anki .apkg",
+    settingsDescription: "Создаёт карточки из пакета колоды Anki. Импортируются Basic-заметки; cloze пока пропускаются.",
+    settingsValue: "Выбрать файл",
+    parsing: "Чтение .apkg…",
+    importing: "Импорт {{count}} заметок…",
+    progress: "Импортировано {{imported}} / {{total}}",
+    success: "Импортировано {{imported}} карточек в колоду «{{deck}}». Пропущено cloze: {{skippedCloze}}. Пустых: {{skippedEmpty}}.",
+    failed: "Не удалось импортировать файл .apkg.",
+    invalidFile: "Выберите файл .apkg.",
+    workspaceUnavailable: "Рабочее пространство недоступно.",
+  },
   localBackup: {
     bannerTitle: "Резервная копия готова",
     bannerBody: "Сохраните JSON-копию в Файлы или Загрузки. iPhone не может писать файлы без действия — нужен один тап.",

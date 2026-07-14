@@ -483,6 +483,18 @@ const arCatalog: TranslationCatalog = {
       localData: "تحتفظ الذاكرة المؤقتة المحلية بالبطاقات والمجموعات وإعدادات الجدولة وعمليات المزامنة المعلقة على هذا الجهاز.",
     },
   },
+  ankiImport: {
+    settingsTitle: "استيراد Anki .apkg",
+    settingsDescription: "ينشئ بطاقات من حزمة مجموعة Anki. تُستورد ملاحظات Basic؛ ويُتخطى Cloze مؤقتًا.",
+    settingsValue: "اختر ملفًا",
+    parsing: "جارٍ قراءة .apkg…",
+    importing: "جارٍ استيراد {{count}} ملاحظة…",
+    progress: "تم استيراد {{imported}} / {{total}}",
+    success: "تم استيراد {{imported}} بطاقة إلى المجموعة «{{deck}}». تم تخطي Cloze: {{skippedCloze}}. فارغة: {{skippedEmpty}}.",
+    failed: "تعذّر استيراد ملف .apkg.",
+    invalidFile: "يرجى اختيار ملف .apkg.",
+    workspaceUnavailable: "مساحة العمل غير متاحة.",
+  },
   localBackup: {
     bannerTitle: "النسخة الاحتياطية جاهزة",
     bannerBody: "احفظ نسخة JSON في الملفات أو التنزيلات. لا يمكن لـ iPhone حفظ الملفات بصمت، لذا يلزم ضغطه واحدة.",

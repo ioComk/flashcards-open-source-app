@@ -483,6 +483,18 @@ const hiCatalog: TranslationCatalog = {
       localData: "लोकल कैश इस डिवाइस पर कार्ड, डेक, शेड्यूलर सेटिंग्स और लंबित सिंक ऑपरेशन रखता है।",
     },
   },
+  ankiImport: {
+    settingsTitle: "Anki .apkg आयात करें",
+    settingsDescription: "Anki डेक पैकेज से कार्ड बनाएँ। Basic नोट आयात होते हैं; cloze अभी छोड़ दिए जाते हैं।",
+    settingsValue: "फ़ाइल चुनें",
+    parsing: ".apkg पढ़ा जा रहा है…",
+    importing: "{{count}} नोट आयात हो रहे हैं…",
+    progress: "{{imported}} / {{total}} आयात हुए",
+    success: "डेक “{{deck}}” में {{imported}} कार्ड आयात हुए। छोड़े गए cloze: {{skippedCloze}}। खाली: {{skippedEmpty}}।",
+    failed: ".apkg फ़ाइल आयात नहीं हो सकी।",
+    invalidFile: "कृपया .apkg फ़ाइल चुनें।",
+    workspaceUnavailable: "वर्कस्पेस उपलब्ध नहीं है।",
+  },
   localBackup: {
     bannerTitle: "बैकअप तैयार है",
     bannerBody: "JSON बैकअप को फ़ाइलें या डाउनलोड में सेव करें। iPhone चुपचाप फ़ाइल नहीं लिख सकता, इसलिए एक टैप ज़रूरी है।",

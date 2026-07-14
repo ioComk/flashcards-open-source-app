@@ -4,6 +4,7 @@ import { useAppData } from "../../appData";
 import { canLoadProgressServerBase } from "../../appData/progress/progressSource";
 import { getAppConfig, isLocalOnlyMode } from "../../config";
 import { useLocalBackupController } from "../../localBackup/useLocalBackupController";
+import { ApkgImportPanel } from "./workspace/ApkgImportPanel";
 import {
   autoLocalePreference,
   type Locale,
@@ -281,6 +282,7 @@ export function SettingsScreen(): ReactElement {
           />
           {localOnlyMode ? (
             <>
+              <ApkgImportPanel />
               <SettingsActionCard
                 title={t("localBackup.settingsTitle")}
                 description={t("localBackup.settingsDescription")}
