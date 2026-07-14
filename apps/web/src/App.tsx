@@ -25,6 +25,7 @@ import { ChatSessionControllerProvider } from "./chat/sessionController";
 import { ChatToggle } from "./chat/layout/ChatToggle";
 import { isLocalOnlyMode } from "./config";
 import { AnchoredFloatingOverlay, useAnchoredFloatingOutsidePointerDismiss, type AnchoredFloatingOverlayMinimumWidth } from "./floating";
+import { useLocalBackupController } from "./localBackup/useLocalBackupController";
 import { useAppErrorDialog } from "./appError/AppErrorContext";
 import { type TranslationKey, useI18n } from "./i18n";
 import { captureApiContractError } from "./observability/apiContractObservation";
@@ -371,6 +372,8 @@ export function AppShell(): ReactElement {
     cloudSettings,
   } = useAppData();
   const { showCapturedTechnicalError } = useAppErrorDialog();
+  const localOnlyMode = isLocalOnlyMode();
+  const localBackup = useLocalBackupController((key) => t(key));
   const [isAccountDeletionPendingState, setIsAccountDeletionPendingState] = useState<boolean>(isAccountDeletionPending);
   const [accountDeletionErrorMessage, setAccountDeletionErrorMessage] = useState<string>("");
   const [accountDeletionTechnicalError, setAccountDeletionTechnicalError] = useState<Error | null>(null);
@@ -703,7 +706,7 @@ export function AppShell(): ReactElement {
                 isWorkspaceManagementLocked={isWorkspaceLocked}
                 workspaceManagementLockedMessage={workspaceManagementLockedMessage}
                 accountSettingsUrl={settingsHubRoute}
-                logoutUrl={isLocalOnlyMode() ? null : buildLogoutUrl()}
+                logoutUrl={localOnlyMode ? null : buildLogoutUrl()}
                 onSelectWorkspace={chooseWorkspace}
                 onCreateWorkspace={createWorkspace}
               />
@@ -743,6 +746,38 @@ export function AppShell(): ReactElement {
       {visibleGlobalErrorMessage !== "" ? (
         <div className="global-error-wrap">
           <div className="global-error">{visibleGlobalErrorMessage}</div>
+        </div>
+      ) : null}
+      {localOnlyMode && localBackup.isPending && activeWorkspaceId !== null ? (
+        <div className="global-error-wrap" data-testid="local-backup-banner">
+          <div className="settings-temporary-banner" role="status">
+            <strong>{t("localBackup.bannerTitle")}</strong>
+            <p className="subtitle">{t("localBackup.bannerBody")}</p>
+            <div className="topbar-actions" style={{ gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button
+                className="primary-btn"
+                type="button"
+                disabled={localBackup.isSaving}
+                onClick={() => {
+                  void localBackup.saveBackup(activeWorkspaceId);
+                }}
+              >
+                {t("localBackup.saveAction")}
+              </button>
+              <button
+                className="ghost-btn"
+                type="button"
+                disabled={localBackup.isSaving}
+                onClick={() => {
+                  localBackup.dismissPending();
+                }}
+              >
+                {t("localBackup.dismissAction")}
+              </button>
+            </div>
+            {localBackup.statusMessage === "" ? null : <p className="subtitle">{localBackup.statusMessage}</p>}
+            {localBackup.errorMessage === "" ? null : <p className="error-banner" role="alert">{localBackup.errorMessage}</p>}
+          </div>
         </div>
       ) : null}
       <RoutedShell />

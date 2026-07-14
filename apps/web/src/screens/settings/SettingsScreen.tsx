@@ -3,6 +3,7 @@ import { isAuthRedirectError } from "../../api";
 import { useAppData } from "../../appData";
 import { canLoadProgressServerBase } from "../../appData/progress/progressSource";
 import { getAppConfig, isLocalOnlyMode } from "../../config";
+import { useLocalBackupController } from "../../localBackup/useLocalBackupController";
 import {
   autoLocalePreference,
   type Locale,
@@ -91,9 +92,10 @@ export function SettingsScreen(): ReactElement {
     setErrorMessage,
     workspaceSettings,
   } = useAppData();
-  const { localePreference, t } = useI18n();
+  const { formatDateTime, localePreference, t } = useI18n();
   const { aiChatComposerSuggestionsEnabled } = useAIChatPreferences();
   const { isTestModeEnabled } = useTestMode();
+  const localBackup = useLocalBackupController((key) => t(key));
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState<boolean>(false);
   const [shareStatusMessage, setShareStatusMessage] = useState<string>("");
   const [shareErrorMessage, setShareErrorMessage] = useState<string>("");
@@ -104,6 +106,9 @@ export function SettingsScreen(): ReactElement {
   const localOnlyMode = isLocalOnlyMode();
   const canCreateInvite = localOnlyMode === false && canLoadProgressServerBase(sessionVerificationState, cloudSettings);
   const appShareUrl = `${getAppConfig().appBaseUrl}${shareRoute}`;
+  const localBackupValue = localBackup.lastSavedAt === null
+    ? t("localBackup.lastSavedNever")
+    : `${t("localBackup.lastSavedPrefix")}: ${formatDateTime(localBackup.lastSavedAt)}`;
 
   useEffect(() => {
     if (localOnlyMode || session === null || isSessionVerified === false) {
@@ -274,7 +279,33 @@ export function SettingsScreen(): ReactElement {
             to={settingsTagsRoute}
             testId="settings-row-tags"
           />
-          {localOnlyMode ? null : (
+          {localOnlyMode ? (
+            <>
+              <SettingsActionCard
+                title={t("localBackup.settingsTitle")}
+                description={t("localBackup.settingsDescription")}
+                value={localBackup.isSaving ? t("common.loading") : localBackupValue}
+                onClick={() => {
+                  if (activeWorkspace?.workspaceId === undefined) {
+                    return;
+                  }
+
+                  void localBackup.saveBackup(activeWorkspace.workspaceId);
+                }}
+                testId="settings-row-local-backup"
+              />
+              {localBackup.statusMessage === "" ? null : (
+                <p className="settings-temporary-banner" role="status" data-testid="settings-local-backup-status">
+                  {localBackup.statusMessage}
+                </p>
+              )}
+              {localBackup.errorMessage === "" ? null : (
+                <p className="error-banner" role="alert" data-testid="settings-local-backup-error">
+                  {localBackup.errorMessage}
+                </p>
+              )}
+            </>
+          ) : (
             <>
               <SettingsNavigationCard
                 title={t("settingsWorkspace.import.title")}

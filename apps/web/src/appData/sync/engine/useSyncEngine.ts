@@ -9,6 +9,7 @@ import {
   isAuthRedirectError,
 } from "../../../api";
 import { isLocalOnlyMode } from "../../../config";
+import { markLocalBackupPending } from "../../../localBackup/localBackupState";
 import {
   loadCloudSettings,
 } from "../../../localDb/sync/cloudSettings";
@@ -820,6 +821,12 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
     return trackedMutationTask;
   }, [requireLocalWorkspaceMutationReady]);
 
+  const noteLocalBackupDirty = useCallback(function noteLocalBackupDirty(): void {
+    if (isLocalOnlyMode()) {
+      markLocalBackupPending();
+    }
+  }, []);
+
   const createCardItem = useCallback(async function createCardItem(input: CreateCardInput): Promise<Card> {
     if (activeWorkspaceId === null || activeWorkspace === null) {
       throw new Error("Workspace is unavailable");
@@ -834,9 +841,10 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
     if (mutationResult.didChangeReviewSchedule) {
       invalidateLocalReviewSchedule();
     }
+    noteLocalBackupDirty();
     runSyncInBackground(runSyncForWorkspace(activeWorkspace));
     return mutationResult.card;
-  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, runLocalWorkspaceMutation, runSyncForWorkspace]);
+  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, noteLocalBackupDirty, runLocalWorkspaceMutation, runSyncForWorkspace]);
 
   const createDeckItem = useCallback(async function createDeckItem(input: CreateDeckInput): Promise<Deck> {
     if (activeWorkspaceId === null || activeWorkspace === null) {
@@ -849,9 +857,10 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
       clientUpdatedAt: nowIso(),
     }));
     bumpLocalReadVersion();
+    noteLocalBackupDirty();
     runSyncInBackground(runSyncForWorkspace(activeWorkspace));
     return mutationResult.deck;
-  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, runLocalWorkspaceMutation, runSyncForWorkspace]);
+  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, noteLocalBackupDirty, runLocalWorkspaceMutation, runSyncForWorkspace]);
 
   const updateCardItem = useCallback(async function updateCardItem(cardId: string, input: UpdateCardInput): Promise<Card> {
     if (activeWorkspaceId === null || activeWorkspace === null) {
@@ -868,9 +877,10 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
     if (mutationResult.didChangeReviewSchedule) {
       invalidateLocalReviewSchedule();
     }
+    noteLocalBackupDirty();
     runSyncInBackground(runSyncForWorkspace(activeWorkspace));
     return mutationResult.card;
-  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, runLocalWorkspaceMutation, runSyncForWorkspace]);
+  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, noteLocalBackupDirty, runLocalWorkspaceMutation, runSyncForWorkspace]);
 
   const updateDeckItem = useCallback(async function updateDeckItem(deckId: string, input: UpdateDeckInput): Promise<Deck> {
     if (activeWorkspaceId === null || activeWorkspace === null) {
@@ -884,9 +894,10 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
       clientUpdatedAt: nowIso(),
     }));
     bumpLocalReadVersion();
+    noteLocalBackupDirty();
     runSyncInBackground(runSyncForWorkspace(activeWorkspace));
     return mutationResult.deck;
-  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, runLocalWorkspaceMutation, runSyncForWorkspace]);
+  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, noteLocalBackupDirty, runLocalWorkspaceMutation, runSyncForWorkspace]);
 
   const deleteCardItem = useCallback(async function deleteCardItem(cardId: string): Promise<Card> {
     if (activeWorkspaceId === null || activeWorkspace === null) {
@@ -902,9 +913,10 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
     if (mutationResult.didChangeReviewSchedule) {
       invalidateLocalReviewSchedule();
     }
+    noteLocalBackupDirty();
     runSyncInBackground(runSyncForWorkspace(activeWorkspace));
     return mutationResult.card;
-  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, runLocalWorkspaceMutation, runSyncForWorkspace]);
+  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, noteLocalBackupDirty, runLocalWorkspaceMutation, runSyncForWorkspace]);
 
   const deleteDeckItem = useCallback(async function deleteDeckItem(deckId: string): Promise<Deck> {
     if (activeWorkspaceId === null || activeWorkspace === null) {
@@ -917,9 +929,10 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
       clientUpdatedAt: nowIso(),
     }));
     bumpLocalReadVersion();
+    noteLocalBackupDirty();
     runSyncInBackground(runSyncForWorkspace(activeWorkspace));
     return mutationResult.deck;
-  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, runLocalWorkspaceMutation, runSyncForWorkspace]);
+  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, noteLocalBackupDirty, runLocalWorkspaceMutation, runSyncForWorkspace]);
 
   const submitReviewItem = useCallback(async function submitReviewItem(
     cardId: string,
@@ -941,9 +954,10 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
     bumpLocalReadVersion();
     invalidateLocalProgress();
     invalidateLocalReviewSchedule();
+    noteLocalBackupDirty();
     runSyncInBackground(runSyncForWorkspace(activeWorkspace));
     return mutationResult.card;
-  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, runLocalWorkspaceMutation, runSyncForWorkspace]);
+  }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, noteLocalBackupDirty, runLocalWorkspaceMutation, runSyncForWorkspace]);
 
   const seedLinkedWorkspace = useCallback(async function seedLinkedWorkspace(
     request: TestSeedRequest,
