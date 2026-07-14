@@ -10,6 +10,7 @@ import {
   type SetStateAction,
 } from "react";
 import { revalidateSession } from "../../api";
+import { isLocalOnlyMode } from "../../config";
 import { useI18n } from "../../i18n";
 import { loadActiveCardCount } from "../../localDb/cards/cards";
 import type {
@@ -318,6 +319,14 @@ export function AppDataProvider(props: Props): ReactElement {
 
     if (sessionLoadState !== "ready" || sessionVerificationState !== "verified") {
       throw new Error(t("app.sessionRestoringActionLocked"));
+    }
+
+    if (isLocalOnlyMode()) {
+      if (session === null) {
+        throw new Error(t("app.sessionUnavailable"));
+      }
+
+      return session.preferences;
     }
 
     const refreshStartedAtMutationVersion = accountPreferencesMutationVersionRef.current;

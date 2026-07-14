@@ -4,6 +4,10 @@ export type AppConfig = Readonly<{
   appBaseUrl: string;
 }>;
 
+export function isLocalOnlyMode(): boolean {
+  return import.meta.env.VITE_LOCAL_ONLY === "true";
+}
+
 function stripTrailingSlash(value: string): string {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 }

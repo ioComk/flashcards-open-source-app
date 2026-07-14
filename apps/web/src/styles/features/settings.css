@@ -563,6 +563,11 @@
   flex: 0 0 auto;
 }
 
+.workspace-import-tag-control > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .workspace-import-tag-control:has(input:disabled) {
   cursor: not-allowed;
   opacity: 0.68;
@@ -604,10 +609,51 @@
 .workspace-import-preview {
   display: grid;
   gap: 12px;
+  min-width: 0;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--content-card-inner-radius, var(--radius-sm));
   background: var(--surface-muted);
+}
+
+.workspace-import-model {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.workspace-import-model .settings-nav-card-copy,
+.workspace-import-model .panel-subtitle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.workspace-import-field-groups,
+.workspace-import-field-list {
+  display: grid;
+}
+
+.workspace-import-field-groups {
+  gap: 10px;
+  min-width: 0;
+}
+
+.workspace-import-field-list {
+  gap: 6px;
+  min-width: 0;
+  margin-top: 6px;
+}
+
+.workspace-import-sample {
+  min-width: 0;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.workspace-import-sample + .workspace-import-sample {
+  margin-top: 4px;
 }
 
 .workspace-import-preview-stats {
@@ -624,6 +670,8 @@
 
 .workspace-import-preview-stat > strong {
   font-size: 1rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .workspace-import-preview-metadata {
@@ -715,6 +763,19 @@
 }
 
 @media (max-width: 600px) {
+  .workspace-import-preview {
+    padding: 10px;
+  }
+
+  .workspace-import-model {
+    padding: 12px;
+  }
+
+  .workspace-export-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .settings-workspace-dialog-backdrop {
     align-items: end;
     padding: 12px;

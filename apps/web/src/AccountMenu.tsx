@@ -13,7 +13,7 @@ type Props = Readonly<{
   isWorkspaceManagementLocked: boolean;
   workspaceManagementLockedMessage: string;
   accountSettingsUrl: string;
-  logoutUrl: string;
+  logoutUrl: string | null;
   onSelectWorkspace: (workspaceId: string) => Promise<void>;
   onCreateWorkspace: (name: string) => Promise<void>;
 }>;
@@ -243,9 +243,11 @@ export function AccountMenu(props: Props): ReactElement {
         <a className="account-menu-item account-menu-link" href={accountSettingsUrl}>
           {t("navigation.settings")}
         </a>
-        <a className="account-menu-item account-menu-link" href={logoutUrl}>
-          {t("accountMenu.logout")}
-        </a>
+        {logoutUrl === null ? null : (
+          <a className="account-menu-item account-menu-link" href={logoutUrl}>
+            {t("accountMenu.logout")}
+          </a>
+        )}
       </AnchoredFloatingOverlay>
     </div>
   );

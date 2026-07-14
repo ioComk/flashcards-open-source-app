@@ -9,7 +9,9 @@ import {
   clearAllLocalBrowserData,
   type LocalBrowserDataCleanupReason,
 } from "../../../accountDeletion";
+import { isLocalOnlyMode } from "../../../config";
 import { putCloudSettings } from "../../../localDb/sync/cloudSettings";
+import { putLocalWorkspaceSummary } from "../../../localDb/meta/localWorkspace";
 import type {
   SessionInfo,
   WorkspaceSummary,
@@ -20,8 +22,10 @@ import {
   markSelectedWorkspaces,
 } from "../../domain";
 import {
+  buildDisconnectedCloudSettings,
   buildLinkedCloudSettings,
 } from "../cloud/workspaceSessionCloud";
+import { ensureLocalOnlyBootstrap } from "../local/localOnlyBootstrap";
 import {
   defaultWorkspaceName,
 } from "./workspaceActivationHelpers";
@@ -38,6 +42,7 @@ import type {
   WorkspaceSessionUiActions,
 } from "../workspaceSessionTypes";
 import { normalizeCaughtError, type WorkspaceActivationBootstrapPhase } from "../../../observability/webObservability";
+import { getStableInstallationId } from "../../../clientIdentity";
 
 type UseWorkspaceActivationParams =
   & Pick<WorkspaceSessionState, "activeWorkspace" | "sessionVerificationState">
@@ -156,16 +161,18 @@ export function useWorkspaceActivation(params: UseWorkspaceActivationParams): Wo
         }
 
         deferredBootstrapWorkspaceRef.current = null;
-        bootstrapPhase = "run_sync";
-        await runSyncForWorkspace(workspace);
-        if (isCurrentBootstrapGeneration() === false) {
-          return;
-        }
+        if (isLocalOnlyMode() === false) {
+          bootstrapPhase = "run_sync";
+          await runSyncForWorkspace(workspace);
+          if (isCurrentBootstrapGeneration() === false) {
+            return;
+          }
 
-        bootstrapPhase = "final_refresh";
-        await refreshWorkspaceView(workspace.workspaceId);
-        if (isCurrentBootstrapGeneration() === false) {
-          return;
+          bootstrapPhase = "final_refresh";
+          await refreshWorkspaceView(workspace.workspaceId);
+          if (isCurrentBootstrapGeneration() === false) {
+            return;
+          }
         }
 
         bootstrapPhase = "completed";
@@ -256,13 +263,25 @@ export function useWorkspaceActivation(params: UseWorkspaceActivationParams): Wo
       selectedWorkspaceId: currentSession.selectedWorkspaceId,
       availableWorkspaceIds: currentWorkspaces.map((currentWorkspace) => currentWorkspace.workspaceId),
     });
-    const linkedCloudSettings = buildLinkedCloudSettings(currentSession, workspace.workspaceId);
-    await putCloudSettings(linkedCloudSettings);
+    const nextCloudSettings = isLocalOnlyMode()
+      ? buildDisconnectedCloudSettings(
+        getStableInstallationId(),
+        currentSession.userId,
+        workspace.workspaceId,
+      )
+      : buildLinkedCloudSettings(currentSession, workspace.workspaceId);
+    await putCloudSettings(nextCloudSettings);
+    if (isLocalOnlyMode()) {
+      await putLocalWorkspaceSummary({
+        ...workspace,
+        isSelected: true,
+      });
+    }
     logWorkspaceTransition("workspace_activate_cloud_settings_saved", {
       workspaceId: workspace.workspaceId,
       selectedWorkspaceId: workspace.workspaceId,
     });
-    setCloudSettings(linkedCloudSettings);
+    setCloudSettings(nextCloudSettings);
     setSessionErrorMessage("");
     setErrorMessage("");
     setSessionTechnicalError(null);
@@ -287,6 +306,16 @@ export function useWorkspaceActivation(params: UseWorkspaceActivationParams): Wo
   const resolveInitialWorkspace = useCallback(async function resolveInitialWorkspace(
     currentSession: SessionInfo,
   ): Promise<void> {
+    if (isLocalOnlyMode()) {
+      const localOnlyBootstrap = await ensureLocalOnlyBootstrap();
+      await activateWorkspace(
+        localOnlyBootstrap.session,
+        [localOnlyBootstrap.workspace],
+        localOnlyBootstrap.workspace,
+      );
+      return;
+    }
+
     const workspaces = await listWorkspaces();
 
     if (workspaces.length === 0) {

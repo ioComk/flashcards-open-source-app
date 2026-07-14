@@ -23,7 +23,9 @@ import { ChatDraftProvider } from "./chat/composer/drafts/ChatDraftContext";
 import { ChatLayoutProvider, useChatLayout } from "./chat/layout/ChatLayoutContext";
 import { ChatSessionControllerProvider } from "./chat/sessionController";
 import { ChatToggle } from "./chat/layout/ChatToggle";
+import { isLocalOnlyMode } from "./config";
 import { AnchoredFloatingOverlay, useAnchoredFloatingOutsidePointerDismiss, type AnchoredFloatingOverlayMinimumWidth } from "./floating";
+import { useLocalBackupController } from "./localBackup/useLocalBackupController";
 import { useAppErrorDialog } from "./appError/AppErrorContext";
 import { type TranslationKey, useI18n } from "./i18n";
 import { captureApiContractError } from "./observability/apiContractObservation";
@@ -87,13 +89,21 @@ type PrimaryNavigationItem = {
   readonly labelKey: TranslationKey;
 };
 
-const primaryNavigationItems: ReadonlyArray<PrimaryNavigationItem> = [
+const allPrimaryNavigationItems: ReadonlyArray<PrimaryNavigationItem> = [
   { route: reviewRoute, labelKey: "navigation.review" },
   { route: progressRoute, labelKey: "navigation.progress" },
   { route: chatRoute, labelKey: "navigation.aiChat" },
   { route: cardsRoute, labelKey: "navigation.cards" },
   { route: settingsHubRoute, labelKey: "navigation.settings" },
 ];
+
+function getPrimaryNavigationItems(): ReadonlyArray<PrimaryNavigationItem> {
+  if (isLocalOnlyMode() === false) {
+    return allPrimaryNavigationItems;
+  }
+
+  return allPrimaryNavigationItems.filter((item) => item.route !== chatRoute);
+}
 
 const mobileNavigationViewportPaddingPx: number = 12;
 const mobileNavigationOffsetPx: number = 8;
@@ -362,6 +372,8 @@ export function AppShell(): ReactElement {
     cloudSettings,
   } = useAppData();
   const { showCapturedTechnicalError } = useAppErrorDialog();
+  const localOnlyMode = isLocalOnlyMode();
+  const localBackup = useLocalBackupController((key) => t(key));
   const [isAccountDeletionPendingState, setIsAccountDeletionPendingState] = useState<boolean>(isAccountDeletionPending);
   const [accountDeletionErrorMessage, setAccountDeletionErrorMessage] = useState<string>("");
   const [accountDeletionTechnicalError, setAccountDeletionTechnicalError] = useState<Error | null>(null);
@@ -666,7 +678,7 @@ export function AppShell(): ReactElement {
               />
             </div>
             <nav className="nav" aria-label={t("shell.primaryNavigation")}>
-              {primaryNavigationItems.map((item) => (
+              {getPrimaryNavigationItems().map((item) => (
                 <NavLink key={item.route} className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to={item.route}>
                   {t(item.labelKey)}
                 </NavLink>
@@ -694,7 +706,7 @@ export function AppShell(): ReactElement {
                 isWorkspaceManagementLocked={isWorkspaceLocked}
                 workspaceManagementLockedMessage={workspaceManagementLockedMessage}
                 accountSettingsUrl={settingsHubRoute}
-                logoutUrl={buildLogoutUrl()}
+                logoutUrl={localOnlyMode ? null : buildLogoutUrl()}
                 onSelectWorkspace={chooseWorkspace}
                 onCreateWorkspace={createWorkspace}
               />
@@ -718,7 +730,7 @@ export function AppShell(): ReactElement {
             ariaDescribedBy={null}
             ariaModal={null}
           >
-            {primaryNavigationItems.map((item) => (
+            {getPrimaryNavigationItems().map((item) => (
               <NavLink
                 key={item.route}
                 className={({ isActive }) => `mobile-nav-link${isActive ? " mobile-nav-link-active" : ""}`}
@@ -734,6 +746,38 @@ export function AppShell(): ReactElement {
       {visibleGlobalErrorMessage !== "" ? (
         <div className="global-error-wrap">
           <div className="global-error">{visibleGlobalErrorMessage}</div>
+        </div>
+      ) : null}
+      {localOnlyMode && localBackup.isPending && activeWorkspaceId !== null ? (
+        <div className="global-error-wrap" data-testid="local-backup-banner">
+          <div className="settings-temporary-banner" role="status">
+            <strong>{t("localBackup.bannerTitle")}</strong>
+            <p className="subtitle">{t("localBackup.bannerBody")}</p>
+            <div className="topbar-actions" style={{ gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button
+                className="primary-btn"
+                type="button"
+                disabled={localBackup.isSaving}
+                onClick={() => {
+                  void localBackup.saveBackup(activeWorkspaceId);
+                }}
+              >
+                {t("localBackup.saveAction")}
+              </button>
+              <button
+                className="ghost-btn"
+                type="button"
+                disabled={localBackup.isSaving}
+                onClick={() => {
+                  localBackup.dismissPending();
+                }}
+              >
+                {t("localBackup.dismissAction")}
+              </button>
+            </div>
+            {localBackup.statusMessage === "" ? null : <p className="subtitle">{localBackup.statusMessage}</p>}
+            {localBackup.errorMessage === "" ? null : <p className="error-banner" role="alert">{localBackup.errorMessage}</p>}
+          </div>
         </div>
       ) : null}
       <RoutedShell />
@@ -764,10 +808,11 @@ function buildChatMainContentClassName(isFullscreenChat: boolean, isOpen: boolea
 export function RoutedShell(): ReactElement {
   const location = useLocation();
   const { isOpen } = useChatLayout();
-  const isFullscreenChat = location.pathname === "/chat";
+  const localOnlyMode = isLocalOnlyMode();
+  const isFullscreenChat = localOnlyMode === false && location.pathname === "/chat";
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const shellClassName = buildChatLayoutShellClassName(isFullscreenChat, isOpen);
-  const contentClassName = buildChatMainContentClassName(isFullscreenChat, isOpen);
+  const shellClassName = buildChatLayoutShellClassName(isFullscreenChat, isOpen && localOnlyMode === false);
+  const contentClassName = buildChatMainContentClassName(isFullscreenChat, isOpen && localOnlyMode === false);
 
   useEffect(() => {
     if (contentRef.current !== null) {
@@ -778,7 +823,7 @@ export function RoutedShell(): ReactElement {
 
   return (
     <div className={shellClassName}>
-      {!isFullscreenChat && isOpen ? (
+      {!isFullscreenChat && isOpen && localOnlyMode === false ? (
         <Suspense fallback={<SidebarChatFallback />}>
           <ChatPanel mode="sidebar" />
         </Suspense>
@@ -853,7 +898,7 @@ export function RoutedShell(): ReactElement {
           <Route path={accountDangerZoneRoute} element={renderDeferredRoute(<DangerZoneScreen />, "loading.dangerZone")} />
           <Route
             path={chatRoute}
-            element={(
+            element={localOnlyMode ? <Navigate replace to={reviewRoute} /> : (
               <Suspense fallback={(
                 <main className="container chat-page">
                   <FullscreenChatFallback />
@@ -868,7 +913,7 @@ export function RoutedShell(): ReactElement {
           />
         </SentryRoutes>
       </div>
-      {!isFullscreenChat && !isOpen ? <ChatToggle /> : null}
+      {!isFullscreenChat && !isOpen && localOnlyMode === false ? <ChatToggle /> : null}
     </div>
   );
 }
