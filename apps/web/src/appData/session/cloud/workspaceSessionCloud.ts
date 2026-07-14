@@ -26,6 +26,22 @@ export function buildLinkedCloudSettings(session: SessionInfo, workspaceId: stri
   };
 }
 
+export function buildDisconnectedCloudSettings(
+  installationId: string,
+  userId: string,
+  workspaceId: string,
+): CloudSettings {
+  return {
+    installationId,
+    cloudState: "disconnected",
+    linkedUserId: userId,
+    linkedWorkspaceId: workspaceId,
+    linkedEmail: null,
+    onboardingCompleted: true,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export function resolveLocalDataCleanupReasonForVerifiedSession(
   persistedCloudSettings: CloudSettings | null,
   currentSession: SessionInfo,

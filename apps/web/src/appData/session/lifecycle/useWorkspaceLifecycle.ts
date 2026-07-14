@@ -11,6 +11,7 @@ import {
   isBrowserReauthRequired,
   type LocalBrowserDataCleanupReason,
 } from "../../../accountDeletion";
+import { isLocalOnlyMode } from "../../../config";
 import type { TranslationKey } from "../../../i18n";
 import { loadCloudSettings, putCloudSettings } from "../../../localDb/sync/cloudSettings";
 import { captureAppOperationError } from "../../../observability/appOperationObservation";
@@ -21,6 +22,7 @@ import {
   buildLinkingReadyCloudSettings,
   resolveLocalDataCleanupReasonForVerifiedSession,
 } from "../cloud/workspaceSessionCloud";
+import { ensureLocalOnlyBootstrap } from "../local/localOnlyBootstrap";
 import {
   consumeLoggedOutMarker,
   createSessionAccountSwitchError,
@@ -118,6 +120,16 @@ export function useWorkspaceLifecycle(params: UseWorkspaceLifecycleParams): Work
     setTechnicalError(null);
 
     try {
+      if (isLocalOnlyMode()) {
+        const localOnlyBootstrap = await ensureLocalOnlyBootstrap();
+        setWebObservabilityUser({ id: localOnlyBootstrap.session.userId });
+        const persistedCloudSettings = await loadCloudSettings();
+        setCloudSettings(persistedCloudSettings);
+        await resolveInitialWorkspace(localOnlyBootstrap.session);
+        setSessionVerificationState("verified");
+        return;
+      }
+
       if (consumeLoggedOutMarker()) {
         await clearConfirmedUserScopedState("logout_marker");
       }
@@ -215,6 +227,10 @@ export function useWorkspaceLifecycle(params: UseWorkspaceLifecycleParams): Work
   const revalidateActiveSession = useCallback(async function revalidateActiveSession(): Promise<boolean> {
     if (sessionLoadState !== "ready" || sessionVerificationState !== "verified" || session === null) {
       return false;
+    }
+
+    if (isLocalOnlyMode()) {
+      return true;
     }
 
     try {
@@ -354,6 +370,10 @@ export function useWorkspaceLifecycle(params: UseWorkspaceLifecycleParams): Work
   }, [activeWorkspace?.workspaceId, runResumeAttempt, session?.userId, setErrorMessage, setTechnicalError]);
 
   useEffect(() => {
+    if (isLocalOnlyMode()) {
+      return;
+    }
+
     if (sessionLoadState !== "ready" || sessionVerificationState !== "verified" || session === null) {
       return;
     }

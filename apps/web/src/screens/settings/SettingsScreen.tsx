@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { isAuthRedirectError } from "../../api";
 import { useAppData } from "../../appData";
 import { canLoadProgressServerBase } from "../../appData/progress/progressSource";
-import { getAppConfig } from "../../config";
+import { getAppConfig, isLocalOnlyMode } from "../../config";
 import {
   autoLocalePreference,
   type Locale,
@@ -101,11 +101,12 @@ export function SettingsScreen(): ReactElement {
   const accountStatus = accountStatusValue(cloudSettings?.linkedEmail ?? session?.profile.email ?? null, t("common.unavailable"));
   const languagePreferenceLabel = formatLocalePreferenceLabel(localePreference, t);
   const schedulerValue = workspaceSettings === null ? t("common.unavailable") : workspaceSettings.algorithm.toUpperCase();
-  const canCreateInvite = canLoadProgressServerBase(sessionVerificationState, cloudSettings);
+  const localOnlyMode = isLocalOnlyMode();
+  const canCreateInvite = localOnlyMode === false && canLoadProgressServerBase(sessionVerificationState, cloudSettings);
   const appShareUrl = `${getAppConfig().appBaseUrl}${shareRoute}`;
 
   useEffect(() => {
-    if (session === null || isSessionVerified === false) {
+    if (localOnlyMode || session === null || isSessionVerified === false) {
       return;
     }
 
@@ -116,7 +117,7 @@ export function SettingsScreen(): ReactElement {
 
       setErrorMessage(error instanceof Error ? error.message : String(error));
     });
-  }, [isSessionVerified, refreshAccountPreferences, session?.userId, setErrorMessage]);
+  }, [isSessionVerified, localOnlyMode, refreshAccountPreferences, session?.userId, setErrorMessage]);
 
   async function shareApp(): Promise<void> {
     setShareStatusMessage("");
@@ -149,50 +150,54 @@ export function SettingsScreen(): ReactElement {
       subtitle={t("settingsHome.subtitle")}
       activeTab="general"
     >
-      <SettingsGroup title={t("settingsHome.groups.share")}>
-        <div className="settings-nav-list">
-          <div className="settings-invite-row">
-            <button
-              className="primary-btn settings-invite-btn"
-              type="button"
-              aria-label={t("settingsHome.inviteFriend.ariaLabel")}
-              onClick={() => setIsInviteDialogOpen(true)}
-              data-testid="settings-invite-open"
-            >
-              {t("settingsHome.inviteFriend.actionText")}
-            </button>
+      {localOnlyMode ? null : (
+        <SettingsGroup title={t("settingsHome.groups.share")}>
+          <div className="settings-nav-list">
+            <div className="settings-invite-row">
+              <button
+                className="primary-btn settings-invite-btn"
+                type="button"
+                aria-label={t("settingsHome.inviteFriend.ariaLabel")}
+                onClick={() => setIsInviteDialogOpen(true)}
+                data-testid="settings-invite-open"
+              >
+                {t("settingsHome.inviteFriend.actionText")}
+              </button>
+            </div>
+            <SettingsActionCard
+              title={t("settingsHome.shareApp.title")}
+              description={t("settingsHome.shareApp.description")}
+              value={t("settingsHome.shareApp.value")}
+              onClick={() => {
+                void shareApp();
+              }}
+              testId="settings-share-app-open"
+            />
           </div>
-          <SettingsActionCard
-            title={t("settingsHome.shareApp.title")}
-            description={t("settingsHome.shareApp.description")}
-            value={t("settingsHome.shareApp.value")}
-            onClick={() => {
-              void shareApp();
-            }}
-            testId="settings-share-app-open"
-          />
-        </div>
-        {shareStatusMessage === "" ? null : (
-          <p className="settings-temporary-banner" role="status" data-testid="settings-share-app-status">
-            {shareStatusMessage}
-          </p>
-        )}
-        {shareErrorMessage === "" ? null : (
-          <p className="error-banner" role="alert" data-testid="settings-share-app-error">
-            {shareErrorMessage}
-          </p>
-        )}
-      </SettingsGroup>
+          {shareStatusMessage === "" ? null : (
+            <p className="settings-temporary-banner" role="status" data-testid="settings-share-app-status">
+              {shareStatusMessage}
+            </p>
+          )}
+          {shareErrorMessage === "" ? null : (
+            <p className="error-banner" role="alert" data-testid="settings-share-app-error">
+              {shareErrorMessage}
+            </p>
+          )}
+        </SettingsGroup>
+      )}
 
       <SettingsGroup title={t("settingsHome.groups.account")}>
         <div className="settings-nav-list">
-          <SettingsNavigationCard
-            title={t("accountSettings.accountStatus.title")}
-            description={t("accountSettings.accountStatus.description")}
-            value={accountStatus}
-            to={accountStatusRoute}
-            testId="settings-row-account-status"
-          />
+          {localOnlyMode ? null : (
+            <SettingsNavigationCard
+              title={t("accountSettings.accountStatus.title")}
+              description={t("accountSettings.accountStatus.description")}
+              value={accountStatus}
+              to={accountStatusRoute}
+              testId="settings-row-account-status"
+            />
+          )}
           <SettingsNavigationCard
             title={t("settingsCurrentWorkspace.title")}
             description={t("settingsCurrentWorkspace.subtitle")}
@@ -205,13 +210,15 @@ export function SettingsScreen(): ReactElement {
 
       <SettingsGroup title={t("settingsHome.groups.general")}>
         <div className="settings-nav-list">
-          <SettingsNavigationCard
-            title={t("notificationsSettings.title")}
-            description={t("notificationsSettings.subtitle")}
-            value={t("notificationsSettings.value")}
-            to={settingsNotificationsRoute}
-            testId="settings-row-review-reminders"
-          />
+          {localOnlyMode ? null : (
+            <SettingsNavigationCard
+              title={t("notificationsSettings.title")}
+              description={t("notificationsSettings.subtitle")}
+              value={t("notificationsSettings.value")}
+              to={settingsNotificationsRoute}
+              testId="settings-row-review-reminders"
+            />
+          )}
           <SettingsNavigationCard
             title={t("reviewAnimationsSettings.title")}
             description={t("reviewAnimationsSettings.subtitle")}
@@ -219,20 +226,24 @@ export function SettingsScreen(): ReactElement {
             to={settingsReviewAnimationsRoute}
             testId="settings-row-review-animations"
           />
-          <SettingsNavigationCard
-            title={t("aiChatSuggestionsSettings.title")}
-            description={t("aiChatSuggestionsSettings.subtitle")}
-            value={aiChatComposerSuggestionsEnabled ? t("common.on") : t("common.off")}
-            to={settingsAIChatSuggestionsRoute}
-            testId="settings-row-ai-chat-suggestions"
-          />
-          <SettingsNavigationCard
-            title={t("leaderboardParticipationSettings.title")}
-            description={t("leaderboardParticipationSettings.subtitle")}
-            value={null}
-            to={settingsLeaderboardParticipationRoute}
-            testId="settings-row-leaderboard-participation"
-          />
+          {localOnlyMode ? null : (
+            <>
+              <SettingsNavigationCard
+                title={t("aiChatSuggestionsSettings.title")}
+                description={t("aiChatSuggestionsSettings.subtitle")}
+                value={aiChatComposerSuggestionsEnabled ? t("common.on") : t("common.off")}
+                to={settingsAIChatSuggestionsRoute}
+                testId="settings-row-ai-chat-suggestions"
+              />
+              <SettingsNavigationCard
+                title={t("leaderboardParticipationSettings.title")}
+                description={t("leaderboardParticipationSettings.subtitle")}
+                value={null}
+                to={settingsLeaderboardParticipationRoute}
+                testId="settings-row-leaderboard-participation"
+              />
+            </>
+          )}
           <SettingsNavigationCard
             title={t("settingsHome.language.title")}
             description={t("settingsHome.language.description")}
@@ -240,13 +251,15 @@ export function SettingsScreen(): ReactElement {
             to={settingsLanguageRoute}
             testId="settings-row-language"
           />
-          <SettingsNavigationCard
-            title={t("accessSettings.title")}
-            description={t("accessSettings.subtitle")}
-            value={t("settingsHome.access.value")}
-            to={settingsAccessRoute}
-            testId="settings-row-access"
-          />
+          {localOnlyMode ? null : (
+            <SettingsNavigationCard
+              title={t("accessSettings.title")}
+              description={t("accessSettings.subtitle")}
+              value={t("settingsHome.access.value")}
+              to={settingsAccessRoute}
+              testId="settings-row-access"
+            />
+          )}
           <SettingsNavigationCard
             title={t("settingsWorkspace.decks.title")}
             description={t("settingsWorkspace.decks.description")}
@@ -261,55 +274,61 @@ export function SettingsScreen(): ReactElement {
             to={settingsTagsRoute}
             testId="settings-row-tags"
           />
-          <SettingsNavigationCard
-            title={t("settingsWorkspace.import.title")}
-            description={t("settingsWorkspace.import.description")}
-            value={t("settingsWorkspace.import.value")}
-            to={settingsImportRoute}
-            testId="settings-row-import"
-          />
-          <SettingsNavigationCard
-            title={t("settingsWorkspace.export.title")}
-            description={t("settingsWorkspace.export.description")}
-            value={t("settingsWorkspace.export.value")}
-            to={settingsExportRoute}
-            testId="settings-row-export"
-          />
+          {localOnlyMode ? null : (
+            <>
+              <SettingsNavigationCard
+                title={t("settingsWorkspace.import.title")}
+                description={t("settingsWorkspace.import.description")}
+                value={t("settingsWorkspace.import.value")}
+                to={settingsImportRoute}
+                testId="settings-row-import"
+              />
+              <SettingsNavigationCard
+                title={t("settingsWorkspace.export.title")}
+                description={t("settingsWorkspace.export.description")}
+                value={t("settingsWorkspace.export.value")}
+                to={settingsExportRoute}
+                testId="settings-row-export"
+              />
+            </>
+          )}
         </div>
       </SettingsGroup>
 
-      <SettingsGroup title={t("settingsHome.groups.support")}>
-        <div className="settings-nav-list">
-          <SettingsNavigationCard
-            title={t("settingsHome.feedback.title")}
-            description={t("settingsHome.feedback.description")}
-            value={t("settingsHome.feedback.value")}
-            to={settingsFeedbackRoute}
-            testId="settings-row-feedback"
-          />
-          <SettingsNavigationCard
-            title={t("support.title")}
-            description={t("support.subtitle")}
-            value={null}
-            to={accountSupportRoute}
-            testId="settings-row-support"
-          />
-          <SettingsNavigationCard
-            title={t("legal.title")}
-            description={t("legal.subtitle")}
-            value={null}
-            to={accountLegalRoute}
-            testId="settings-row-legal"
-          />
-          <SettingsNavigationCard
-            title={t("openSourceSettings.title")}
-            description={t("openSourceSettings.subtitle")}
-            value={t("accountSettings.openSource.value")}
-            to={accountOpenSourceRoute}
-            testId="settings-row-open-source"
-          />
-        </div>
-      </SettingsGroup>
+      {localOnlyMode ? null : (
+        <SettingsGroup title={t("settingsHome.groups.support")}>
+          <div className="settings-nav-list">
+            <SettingsNavigationCard
+              title={t("settingsHome.feedback.title")}
+              description={t("settingsHome.feedback.description")}
+              value={t("settingsHome.feedback.value")}
+              to={settingsFeedbackRoute}
+              testId="settings-row-feedback"
+            />
+            <SettingsNavigationCard
+              title={t("support.title")}
+              description={t("support.subtitle")}
+              value={null}
+              to={accountSupportRoute}
+              testId="settings-row-support"
+            />
+            <SettingsNavigationCard
+              title={t("legal.title")}
+              description={t("legal.subtitle")}
+              value={null}
+              to={accountLegalRoute}
+              testId="settings-row-legal"
+            />
+            <SettingsNavigationCard
+              title={t("openSourceSettings.title")}
+              description={t("openSourceSettings.subtitle")}
+              value={t("accountSettings.openSource.value")}
+              to={accountOpenSourceRoute}
+              testId="settings-row-open-source"
+            />
+          </div>
+        </SettingsGroup>
+      )}
 
       <SettingsGroup title={t("settingsHome.groups.advanced")}>
         <div className="settings-nav-list">
@@ -320,20 +339,24 @@ export function SettingsScreen(): ReactElement {
             to={settingsSchedulerRoute}
             testId="settings-row-scheduling"
           />
-          <SettingsNavigationCard
-            title={t("agentConnections.title")}
-            description={t("agentConnections.subtitle")}
-            value={t("accountSettings.agentConnections.value")}
-            to={accountAgentConnectionsRoute}
-            testId="settings-row-agent-connections"
-          />
-          <SettingsNavigationCard
-            title={t("settingsHome.server.title")}
-            description={t("settingsHome.server.description")}
-            value={t("settingsHome.server.value")}
-            to={settingsServerRoute}
-            testId="settings-row-server"
-          />
+          {localOnlyMode ? null : (
+            <>
+              <SettingsNavigationCard
+                title={t("agentConnections.title")}
+                description={t("agentConnections.subtitle")}
+                value={t("accountSettings.agentConnections.value")}
+                to={accountAgentConnectionsRoute}
+                testId="settings-row-agent-connections"
+              />
+              <SettingsNavigationCard
+                title={t("settingsHome.server.title")}
+                description={t("settingsHome.server.description")}
+                value={t("settingsHome.server.value")}
+                to={settingsServerRoute}
+                testId="settings-row-server"
+              />
+            </>
+          )}
           <SettingsNavigationCard
             title={t("settingsDevice.title")}
             description={t("settingsDevice.subtitle")}
@@ -341,27 +364,31 @@ export function SettingsScreen(): ReactElement {
             to={settingsDeviceRoute}
             testId="settings-row-device-diagnostics"
           />
-          <SettingsNavigationCard
-            title={t("settingsWorkspace.resetProgress.title")}
-            description={t("settingsWorkspace.resetProgress.description")}
-            value={t("settingsWorkspace.resetProgress.value")}
-            to={settingsResetStudyProgressRoute}
-            testId="settings-row-reset-study-progress"
-          />
-          <SettingsNavigationCard
-            title={t("settingsHome.deleteCurrentWorkspace.title")}
-            description={t("settingsHome.deleteCurrentWorkspace.description")}
-            value={t("settingsHome.deleteCurrentWorkspace.value")}
-            to={settingsDeleteCurrentWorkspaceRoute}
-            testId="settings-row-delete-current-workspace"
-          />
-          <SettingsNavigationCard
-            title={t("dangerZone.deleteTitle")}
-            description={t("dangerZone.deleteDescription")}
-            value={t("accountSettings.dangerZone.value")}
-            to={accountDangerZoneRoute}
-            testId="settings-row-delete-account"
-          />
+          {localOnlyMode ? null : (
+            <>
+              <SettingsNavigationCard
+                title={t("settingsWorkspace.resetProgress.title")}
+                description={t("settingsWorkspace.resetProgress.description")}
+                value={t("settingsWorkspace.resetProgress.value")}
+                to={settingsResetStudyProgressRoute}
+                testId="settings-row-reset-study-progress"
+              />
+              <SettingsNavigationCard
+                title={t("settingsHome.deleteCurrentWorkspace.title")}
+                description={t("settingsHome.deleteCurrentWorkspace.description")}
+                value={t("settingsHome.deleteCurrentWorkspace.value")}
+                to={settingsDeleteCurrentWorkspaceRoute}
+                testId="settings-row-delete-current-workspace"
+              />
+              <SettingsNavigationCard
+                title={t("dangerZone.deleteTitle")}
+                description={t("dangerZone.deleteDescription")}
+                value={t("accountSettings.dangerZone.value")}
+                to={accountDangerZoneRoute}
+                testId="settings-row-delete-account"
+              />
+            </>
+          )}
           {isTestModeEnabled ? (
             <SettingsNavigationCard
               title={t("settingsTest.title")}
@@ -374,7 +401,7 @@ export function SettingsScreen(): ReactElement {
         </div>
       </SettingsGroup>
 
-      {isInviteDialogOpen ? (
+      {isInviteDialogOpen && localOnlyMode === false ? (
         <FriendInviteCreateDialog
           canCreateInvite={canCreateInvite}
           authRedirectUrl={window.location.href}

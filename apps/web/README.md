@@ -71,9 +71,10 @@ This package can be deployed to Vercel as a static SPA clone of the web UI.
 Important limitation: the official hosted API/auth allow only
 `https://app.flashcards-open-source-app.com` (plus local localhost). A Vercel
 origin is not on that allowlist, so login, cookie session, CORS, and sync against
-the official backend will not work from a Vercel deploy. Use this path to host
-the UI clone; full cloud behavior needs your own backend allowlist, or a later
-local-only mode.
+the official backend will not work from a Vercel deploy.
+
+For a working Anki-like single-device deploy, set `VITE_LOCAL_ONLY=true`. That
+skips auth/sync/API and keeps cards/reviews in IndexedDB only.
 
 Setup:
 

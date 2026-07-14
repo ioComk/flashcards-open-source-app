@@ -1,4 +1,5 @@
 import { isBrowserReauthRequired } from "../../../accountDeletion";
+import { isLocalOnlyMode } from "../../../config";
 import type { SessionInfo, WorkspaceSummary } from "../../../types";
 
 export type { SessionVerificationState } from "../workspaceSessionTypes";
@@ -136,7 +137,7 @@ export function loadWarmStartSnapshot(): WarmStartSnapshot | null {
     return null;
   }
 
-  if (hasLoggedInCookie() === false) {
+  if (isLocalOnlyMode() === false && hasLoggedInCookie() === false) {
     return null;
   }
 

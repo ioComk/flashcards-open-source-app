@@ -23,6 +23,7 @@ import { ChatDraftProvider } from "./chat/composer/drafts/ChatDraftContext";
 import { ChatLayoutProvider, useChatLayout } from "./chat/layout/ChatLayoutContext";
 import { ChatSessionControllerProvider } from "./chat/sessionController";
 import { ChatToggle } from "./chat/layout/ChatToggle";
+import { isLocalOnlyMode } from "./config";
 import { AnchoredFloatingOverlay, useAnchoredFloatingOutsidePointerDismiss, type AnchoredFloatingOverlayMinimumWidth } from "./floating";
 import { useAppErrorDialog } from "./appError/AppErrorContext";
 import { type TranslationKey, useI18n } from "./i18n";
@@ -87,13 +88,21 @@ type PrimaryNavigationItem = {
   readonly labelKey: TranslationKey;
 };
 
-const primaryNavigationItems: ReadonlyArray<PrimaryNavigationItem> = [
+const allPrimaryNavigationItems: ReadonlyArray<PrimaryNavigationItem> = [
   { route: reviewRoute, labelKey: "navigation.review" },
   { route: progressRoute, labelKey: "navigation.progress" },
   { route: chatRoute, labelKey: "navigation.aiChat" },
   { route: cardsRoute, labelKey: "navigation.cards" },
   { route: settingsHubRoute, labelKey: "navigation.settings" },
 ];
+
+function getPrimaryNavigationItems(): ReadonlyArray<PrimaryNavigationItem> {
+  if (isLocalOnlyMode() === false) {
+    return allPrimaryNavigationItems;
+  }
+
+  return allPrimaryNavigationItems.filter((item) => item.route !== chatRoute);
+}
 
 const mobileNavigationViewportPaddingPx: number = 12;
 const mobileNavigationOffsetPx: number = 8;
@@ -666,7 +675,7 @@ export function AppShell(): ReactElement {
               />
             </div>
             <nav className="nav" aria-label={t("shell.primaryNavigation")}>
-              {primaryNavigationItems.map((item) => (
+              {getPrimaryNavigationItems().map((item) => (
                 <NavLink key={item.route} className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to={item.route}>
                   {t(item.labelKey)}
                 </NavLink>
@@ -694,7 +703,7 @@ export function AppShell(): ReactElement {
                 isWorkspaceManagementLocked={isWorkspaceLocked}
                 workspaceManagementLockedMessage={workspaceManagementLockedMessage}
                 accountSettingsUrl={settingsHubRoute}
-                logoutUrl={buildLogoutUrl()}
+                logoutUrl={isLocalOnlyMode() ? null : buildLogoutUrl()}
                 onSelectWorkspace={chooseWorkspace}
                 onCreateWorkspace={createWorkspace}
               />
@@ -718,7 +727,7 @@ export function AppShell(): ReactElement {
             ariaDescribedBy={null}
             ariaModal={null}
           >
-            {primaryNavigationItems.map((item) => (
+            {getPrimaryNavigationItems().map((item) => (
               <NavLink
                 key={item.route}
                 className={({ isActive }) => `mobile-nav-link${isActive ? " mobile-nav-link-active" : ""}`}
@@ -764,10 +773,11 @@ function buildChatMainContentClassName(isFullscreenChat: boolean, isOpen: boolea
 export function RoutedShell(): ReactElement {
   const location = useLocation();
   const { isOpen } = useChatLayout();
-  const isFullscreenChat = location.pathname === "/chat";
+  const localOnlyMode = isLocalOnlyMode();
+  const isFullscreenChat = localOnlyMode === false && location.pathname === "/chat";
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const shellClassName = buildChatLayoutShellClassName(isFullscreenChat, isOpen);
-  const contentClassName = buildChatMainContentClassName(isFullscreenChat, isOpen);
+  const shellClassName = buildChatLayoutShellClassName(isFullscreenChat, isOpen && localOnlyMode === false);
+  const contentClassName = buildChatMainContentClassName(isFullscreenChat, isOpen && localOnlyMode === false);
 
   useEffect(() => {
     if (contentRef.current !== null) {
@@ -778,7 +788,7 @@ export function RoutedShell(): ReactElement {
 
   return (
     <div className={shellClassName}>
-      {!isFullscreenChat && isOpen ? (
+      {!isFullscreenChat && isOpen && localOnlyMode === false ? (
         <Suspense fallback={<SidebarChatFallback />}>
           <ChatPanel mode="sidebar" />
         </Suspense>
@@ -853,7 +863,7 @@ export function RoutedShell(): ReactElement {
           <Route path={accountDangerZoneRoute} element={renderDeferredRoute(<DangerZoneScreen />, "loading.dangerZone")} />
           <Route
             path={chatRoute}
-            element={(
+            element={localOnlyMode ? <Navigate replace to={reviewRoute} /> : (
               <Suspense fallback={(
                 <main className="container chat-page">
                   <FullscreenChatFallback />
@@ -868,7 +878,7 @@ export function RoutedShell(): ReactElement {
           />
         </SentryRoutes>
       </div>
-      {!isFullscreenChat && !isOpen ? <ChatToggle /> : null}
+      {!isFullscreenChat && !isOpen && localOnlyMode === false ? <ChatToggle /> : null}
     </div>
   );
 }

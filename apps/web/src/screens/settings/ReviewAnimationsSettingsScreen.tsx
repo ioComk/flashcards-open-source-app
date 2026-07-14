@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { isAuthRedirectError, updateAccountPreferences } from "../../api";
 import { useAppData } from "../../appData";
 import { useAppErrorDialog } from "../../appError/AppErrorContext";
+import { isLocalOnlyMode } from "../../config";
 import { useI18n } from "../../i18n";
 import { captureAppOperationError } from "../../observability/appOperationObservation";
 import type { AccountPreferences } from "../../types";
@@ -111,6 +112,10 @@ export function ReviewAnimationsSettingsScreen(): ReactElement {
     setAccountPreferences(targetUserId, nextPreferences);
 
     try {
+      if (isLocalOnlyMode()) {
+        return;
+      }
+
       const response = await updateAccountPreferences(nextPreferences);
       setAccountPreferences(targetUserId, response.preferences);
       await refreshPreferencesAfterPatch();

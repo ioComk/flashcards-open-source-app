@@ -8,6 +8,7 @@ import {
 import {
   isAuthRedirectError,
 } from "../../../api";
+import { isLocalOnlyMode } from "../../../config";
 import {
   loadCloudSettings,
 } from "../../../localDb/sync/cloudSettings";
@@ -563,6 +564,10 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
     workspace: WorkspaceSummary,
     reportSyncError: (report: SyncFailureReport) => void,
   ): Promise<void> {
+    if (isLocalOnlyMode()) {
+      return;
+    }
+
     // Local writes may happen during warm start, but remote sync stays paused
     // until auth verification confirms which account owns this browser state.
     if (isDiscardingAllSyncWorkRef.current || session === null || sessionVerificationState !== "verified") {
@@ -740,6 +745,10 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
         entityId: null,
       });
     });
+    if (isLocalOnlyMode()) {
+      return;
+    }
+
     runSyncInBackground(runSyncForWorkspace(activeWorkspace));
     runMediaUploadTransfersForWorkspace(activeWorkspace);
   }, [
