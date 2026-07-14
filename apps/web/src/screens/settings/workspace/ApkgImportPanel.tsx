@@ -201,9 +201,8 @@ export function ApkgImportPanel(): ReactElement {
             return (
               <article
                 key={model.id}
-                className="content-card"
+                className="content-card workspace-import-model"
                 data-testid={`settings-anki-import-model-${model.id}`}
-                style={{ display: "grid", gap: 12, padding: 16 }}
               >
                 <div className="settings-nav-card-copy">
                   <strong className="panel-subtitle">
@@ -215,10 +214,10 @@ export function ApkgImportPanel(): ReactElement {
                   </p>
                 </div>
 
-                <div style={{ display: "grid", gap: 10 }}>
+                <div className="workspace-import-field-groups">
                   <div>
                     <strong className="subtitle">{t("ankiImport.frontFieldsLabel")}</strong>
-                    <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
+                    <div className="workspace-import-field-list">
                       {model.fieldNames.map((fieldName) => (
                         <label key={`front-${model.id}-${fieldName}`} className="workspace-import-tag-control">
                           <input
@@ -241,7 +240,7 @@ export function ApkgImportPanel(): ReactElement {
 
                   <div>
                     <strong className="subtitle">{t("ankiImport.backFieldsLabel")}</strong>
-                    <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
+                    <div className="workspace-import-field-list">
                       {model.fieldNames.map((fieldName) => (
                         <label key={`back-${model.id}-${fieldName}`} className="workspace-import-tag-control">
                           <input
@@ -266,12 +265,12 @@ export function ApkgImportPanel(): ReactElement {
                 {preview === null ? null : (
                   <div className="workspace-import-preview-stat" data-testid={`settings-anki-import-preview-${model.id}`}>
                     <span className="subtitle">{t("ankiImport.previewSampleLabel")}</span>
-                    <p className="subtitle" style={{ margin: "6px 0 0", whiteSpace: "pre-wrap" }}>
+                    <p className="subtitle workspace-import-sample">
                       <strong>{t("ankiImport.previewFrontLabel")}</strong>
                       {": "}
                       {truncatePreview(preview.frontText) || t("ankiImport.previewEmpty")}
                     </p>
-                    <p className="subtitle" style={{ margin: "4px 0 0", whiteSpace: "pre-wrap" }}>
+                    <p className="subtitle workspace-import-sample">
                       <strong>{t("ankiImport.previewBackLabel")}</strong>
                       {": "}
                       {truncatePreview(preview.backText) || t("ankiImport.previewEmpty")}
@@ -288,7 +287,7 @@ export function ApkgImportPanel(): ReactElement {
             );
           })}
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div className="workspace-export-actions">
             <button
               type="button"
               className="primary-btn"
