@@ -9,7 +9,11 @@ import {
   isAuthRedirectError,
 } from "../../../api";
 import { isLocalOnlyMode } from "../../../config";
-import { markLocalBackupPending } from "../../../localBackup/localBackupState";
+import { markLocalBackupPending, storeLocalBackupLastSavedAt } from "../../../localBackup/localBackupState";
+import {
+  type LocalWorkspaceBackup,
+  replacePreparedLocalWorkspaceBackup,
+} from "../../../localBackup/localWorkspaceBackupFormat";
 import {
   loadCloudSettings,
 } from "../../../localDb/sync/cloudSettings";
@@ -82,7 +86,7 @@ import {
   validateSeedRequest,
 } from "../local/syncSeed";
 import type { TestSeedRequest, TestSeedResult } from "../local/testSeedBridge";
-import type { SessionLoadState } from "../../context/types";
+import type { LocalBackupRestoreResult, SessionLoadState } from "../../context/types";
 import type { SessionVerificationState } from "../../session/workspaceSessionTypes";
 
 type UseSyncEngineParams = Readonly<{
@@ -116,6 +120,7 @@ type SyncEngine = Readonly<{
   deleteCardItem: (cardId: string) => Promise<Card>;
   deleteDeckItem: (deckId: string) => Promise<Deck>;
   submitReviewItem: (cardId: string, rating: 0 | 1 | 2 | 3) => Promise<Card>;
+  restoreLocalBackup: (backup: LocalWorkspaceBackup) => Promise<LocalBackupRestoreResult>;
   seedLinkedWorkspace: (request: TestSeedRequest) => Promise<TestSeedResult>;
 }>;
 
@@ -959,6 +964,32 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
     return mutationResult.card;
   }, [activeWorkspace, activeWorkspaceId, bumpLocalReadVersion, noteLocalBackupDirty, runLocalWorkspaceMutation, runSyncForWorkspace]);
 
+  const restoreLocalBackup = useCallback(async function restoreLocalBackup(
+    backup: LocalWorkspaceBackup,
+  ): Promise<LocalBackupRestoreResult> {
+    if (isLocalOnlyMode() === false) {
+      throw new Error("Local backup restore is only available in local-only mode");
+    }
+
+    if (activeWorkspaceId === null) {
+      throw new Error("Workspace is unavailable");
+    }
+
+    await Promise.allSettled([...localMutationPromisesRef.current]);
+    await runLocalWorkspaceMutation(() => replacePreparedLocalWorkspaceBackup(backup, activeWorkspaceId));
+    storeLocalBackupLastSavedAt(backup.exportedAt);
+    invalidateLocalReviewSchedule();
+    invalidateLocalProgress();
+
+    try {
+      await refreshWorkspaceView(activeWorkspaceId);
+      return { kind: "restored" };
+    } catch (error) {
+      console.error("Local backup restore view refresh failed", error);
+      return { kind: "restored-needs-reload" };
+    }
+  }, [activeWorkspaceId, refreshWorkspaceView, runLocalWorkspaceMutation]);
+
   const seedLinkedWorkspace = useCallback(async function seedLinkedWorkspace(
     request: TestSeedRequest,
   ): Promise<TestSeedResult> {
@@ -1029,6 +1060,7 @@ export function useSyncEngine(params: UseSyncEngineParams): SyncEngine {
     deleteCardItem,
     deleteDeckItem,
     submitReviewItem,
+    restoreLocalBackup,
     seedLinkedWorkspace,
   };
 }

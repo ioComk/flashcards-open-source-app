@@ -287,6 +287,9 @@ export function createAppData(): AppDataContextValue {
     submitReviewItem: vi.fn(async (_cardId: string, _rating: 0 | 1 | 2 | 3) => {
       throw new Error("submitReviewItem was not expected in ProgressScreen test");
     }),
+    restoreLocalBackup: vi.fn(async (_backup) => {
+      throw new Error("restoreLocalBackup was not expected in ProgressScreen test");
+    }),
   };
 }
 

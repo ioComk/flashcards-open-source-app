@@ -76,8 +76,9 @@ the official backend will not work from a Vercel deploy.
 For a working Anki-like single-device deploy, set `VITE_LOCAL_ONLY=true`. That
 skips auth/sync/API and keeps cards/reviews in IndexedDB only.
 
-Local-only Settings also supports importing Anki `.apkg` packages (Basic notes;
-Cloze skipped) and one-tap JSON file backups.
+Local-only Settings imports Anki `.apkg` packages, saves a JSON backup, and
+restores that file by replacing the cards, decks, and review history on this
+device. The backup file does not include images.
 
 Setup:
 
