@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { LocalWorkspaceBackup } from "../../localBackup/localWorkspaceBackupFormat";
 import type {
   AccountPreferences,
   Card,
@@ -18,6 +19,10 @@ import type {
 import type { SessionVerificationState } from "../session/workspaceSessionTypes";
 
 export type SessionLoadState = "loading" | "ready" | "redirecting" | "selecting_workspace" | "error" | "deleted";
+
+export type LocalBackupRestoreResult =
+  | Readonly<{ kind: "restored" }>
+  | Readonly<{ kind: "restored-needs-reload" }>;
 
 export type AppDataContextValue = Readonly<{
   sessionLoadState: SessionLoadState;
@@ -61,6 +66,7 @@ export type AppDataContextValue = Readonly<{
   selectReviewFilter: (reviewFilter: ReviewFilter) => void;
   openReview: (reviewFilter: ReviewFilter) => void;
   submitReviewItem: (cardId: string, rating: 0 | 1 | 2 | 3) => Promise<Card>;
+  restoreLocalBackup: (backup: LocalWorkspaceBackup) => Promise<LocalBackupRestoreResult>;
 }>;
 
 export type Props = Readonly<{

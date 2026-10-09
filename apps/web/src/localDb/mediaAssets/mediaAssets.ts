@@ -7,10 +7,7 @@ import {
   runReadwrite,
   type StoredMediaAsset,
 } from "../core/database";
-
-function makeWorkspaceKeyRange(workspaceId: string): IDBKeyRange {
-  return IDBKeyRange.bound([workspaceId], [workspaceId, []]);
-}
+import { makeWorkspaceKeyRange } from "../core/workspaceKeyRange";
 
 export function putMediaAssetInTransaction(transaction: IDBTransaction, mediaAsset: MediaAsset): void {
   transaction.objectStore("mediaAssets").put(mediaAsset satisfies StoredMediaAsset);

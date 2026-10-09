@@ -18,6 +18,7 @@ import {
   getFromStore,
   runReadwrite,
 } from "../../core/database";
+import { makeWorkspaceKeyRange } from "../../core/workspaceKeyRange";
 
 type DeckStatsAccumulator = Readonly<{
   totalCards: number;
@@ -118,23 +119,6 @@ function toDeckCardStats(stats: DeckStatsAccumulator): DeckCardStats {
   };
 }
 
-function deleteWorkspaceDecks(
-  store: IDBObjectStore,
-  workspaceId: string,
-): IDBRequest<IDBValidKey[]> {
-  const request = store.getAllKeys();
-  request.onsuccess = () => {
-    for (const key of request.result) {
-      if (!Array.isArray(key) || key[0] !== workspaceId) {
-        continue;
-      }
-
-      store.delete(key);
-    }
-  };
-  return request;
-}
-
 export async function loadActiveDecksWithDatabase(database: IDBDatabase, workspaceId: string): Promise<ReadonlyArray<Deck>> {
   const decks: Array<Deck> = [];
   await iterateDecksByCreatedAtDesc(database, workspaceId, (deck) => {
@@ -208,10 +192,9 @@ export async function loadDeckById(workspaceId: string, deckId: string): Promise
 
 export async function replaceDecks(workspaceId: string, decks: ReadonlyArray<Deck>): Promise<void> {
   await closeDatabaseAfterWrite(async (database) => {
-    await runReadwrite(database, ["decks"], (transaction) => deleteWorkspaceDecks(transaction.objectStore("decks"), workspaceId));
-
     await runReadwrite(database, ["decks"], (transaction) => {
       const store = transaction.objectStore("decks");
+      store.delete(makeWorkspaceKeyRange(workspaceId));
       for (const deck of decks) {
         store.put(deck);
       }

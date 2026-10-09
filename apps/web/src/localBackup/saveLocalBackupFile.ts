@@ -1,7 +1,7 @@
 import {
   buildLocalBackupFilename,
   buildLocalWorkspaceBackup,
-} from "./buildLocalWorkspaceBackup";
+} from "./localWorkspaceBackupFormat";
 import { storeLocalBackupLastSavedAt } from "./localBackupState";
 
 function triggerBlobDownload(blob: Blob, filename: string): void {

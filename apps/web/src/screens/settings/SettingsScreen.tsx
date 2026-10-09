@@ -5,6 +5,7 @@ import { canLoadProgressServerBase } from "../../appData/progress/progressSource
 import { getAppConfig, isLocalOnlyMode } from "../../config";
 import { useLocalBackupController } from "../../localBackup/useLocalBackupController";
 import { ApkgImportPanel } from "./workspace/ApkgImportPanel";
+import { LocalBackupRestorePanel } from "./workspace/LocalBackupRestorePanel";
 import {
   autoLocalePreference,
   type Locale,
@@ -306,6 +307,7 @@ export function SettingsScreen(): ReactElement {
                   {localBackup.errorMessage}
                 </p>
               )}
+              <LocalBackupRestorePanel />
             </>
           ) : (
             <>

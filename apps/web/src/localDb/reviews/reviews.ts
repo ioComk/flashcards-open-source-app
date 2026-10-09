@@ -628,23 +628,6 @@ function makeReviewCursorCardIdPredicate(cursorState: ReviewQueueCursorState | n
   };
 }
 
-function deleteWorkspaceReviewEvents(
-  store: IDBObjectStore,
-  workspaceId: string,
-): IDBRequest<IDBValidKey[]> {
-  const request = store.getAllKeys();
-  request.onsuccess = () => {
-    for (const key of request.result) {
-      if (!Array.isArray(key) || key[0] !== workspaceId) {
-        continue;
-      }
-
-      store.delete(key);
-    }
-  };
-  return request;
-}
-
 export async function loadReviewEventsForSql(workspaceId: string): Promise<ReadonlyArray<ReviewEvent>> {
   return closeDatabaseAfter(async (database) => {
     const reviewEvents = await getAllFromStore<ReviewEvent>(database, "reviewEvents");
@@ -742,31 +725,6 @@ export async function loadReviewTimelinePage(
       cards: pageCards,
       hasMoreCards,
     };
-  });
-}
-
-export async function replaceReviewEvents(workspaceId: string, reviewEvents: ReadonlyArray<ReviewEvent>): Promise<void> {
-  await closeDatabaseAfterWrite(async (database) => {
-    const progressCacheState = await loadProgressCacheState(database);
-
-    await runReadwrite(database, ["reviewEvents"], (transaction) => (
-      deleteWorkspaceReviewEvents(transaction.objectStore("reviewEvents"), workspaceId)
-    ));
-
-    await runReadwrite(database, ["reviewEvents"], (transaction) => {
-      const store = transaction.objectStore("reviewEvents");
-      for (const reviewEvent of reviewEvents) {
-        store.put(reviewEvent);
-      }
-      return null;
-    });
-
-    if (progressCacheState !== null) {
-      await runReadwrite(database, ["meta"], (transaction) => {
-        markProgressCacheDirtyInTransaction(transaction, progressCacheState.timeZone);
-        return null;
-      });
-    }
   });
 }
 

@@ -436,6 +436,7 @@ export function AppDataProvider(props: Props): ReactElement {
     selectReviewFilter,
     openReview,
     submitReviewItem: syncEngine.submitReviewItem,
+    restoreLocalBackup: syncEngine.restoreLocalBackup,
   };
 
   return (

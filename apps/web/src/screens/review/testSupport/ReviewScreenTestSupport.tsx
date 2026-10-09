@@ -267,6 +267,7 @@ function createAppData(state: ReviewScreenTestState): ReviewScreenAppData {
     selectReviewFilter: vi.fn(),
     openReview: vi.fn(),
     submitReviewItem: vi.fn(async (_cardId: string, _rating: 0 | 1 | 2 | 3): Promise<Card> => throwNotUsed("submitReviewItem")),
+    restoreLocalBackup: vi.fn(async (_backup) => throwNotUsed("restoreLocalBackup")),
   };
 
   Object.defineProperty(appData, "localCardCount", {

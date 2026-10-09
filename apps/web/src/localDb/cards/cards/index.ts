@@ -18,6 +18,7 @@ import {
   type StoredCard,
 } from "../../core/database";
 import { encodeCursor, decodeCursor } from "../../core/queryShared";
+import { makeWorkspaceKeyRange } from "../../core/workspaceKeyRange";
 
 type CardCursorIndexName =
   | "workspaceId_createdAt_cardId"
@@ -120,11 +121,6 @@ function openIndexedCursor(
   options: IndexedCardCursorOptions,
 ): IDBRequest<IDBCursorWithValue | null> {
   return store.index(options.indexName).openCursor(options.keyRange, options.direction);
-}
-
-/** Compound-key range matching every key prefixed by `workspaceId`: lower `[workspaceId]` is shorter than any real key, and upper `[workspaceId, []]` exploits IDB's type ordering (Array > String/Number) to sort above every primitive second component. */
-function makeWorkspaceKeyRange(workspaceId: string): IDBKeyRange {
-  return IDBKeyRange.bound([workspaceId], [workspaceId, []]);
 }
 
 function makeWorkspaceDueAtMillisBeforeRange(workspaceId: string, dueAtMillisExclusive: number): IDBKeyRange {
@@ -952,13 +948,17 @@ export async function replaceCards(workspaceId: string, cards: ReadonlyArray<Car
       cardTagsStore.delete(workspaceKeyRange);
 
       for (const card of cards) {
-        cardsStore.put(toStoredCard(workspaceId, card));
-        putCardTagRecords(cardTagsStore, workspaceId, card);
+        putCardSnapshotInTransaction(transaction, workspaceId, card);
       }
 
       return deleteCardsRequest;
     });
   });
+}
+
+export function putCardSnapshotInTransaction(transaction: IDBTransaction, workspaceId: string, card: Card): void {
+  transaction.objectStore("cards").put(toStoredCard(workspaceId, card));
+  putCardTagRecords(transaction.objectStore("cardTags"), workspaceId, card);
 }
 
 export function putCardInTransaction(transaction: IDBTransaction, workspaceId: string, card: Card): void {
