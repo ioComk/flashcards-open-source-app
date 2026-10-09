@@ -7,7 +7,7 @@ import type {
   WorkspaceTagsSummary,
 } from "../../../types";
 import { iterateAllCardTags } from "../tags";
-import { loadActiveCardCountWithDatabase, putCardInTransaction } from "../cards";
+import { loadActiveCardCountWithDatabase, putCardInTransaction, putCardSnapshotInTransaction } from "../cards";
 import {
   closeDatabaseAfter,
   closeDatabaseAfterWrite,
@@ -239,14 +239,13 @@ export async function replaceWorkspaceContent(
       ["cards", "cardTags", "decks", "reviewEvents", "workspaceSettings", "meta"],
       (transaction) => {
         const workspaceKeyRange = makeWorkspaceKeyRange(workspaceId);
-        // Range deletes must precede every put: a later one would erase the cards written above it but not the tags writeCardTagRecords puts from its cursor callback.
         transaction.objectStore("cards").delete(workspaceKeyRange);
         transaction.objectStore("cardTags").delete(workspaceKeyRange);
         transaction.objectStore("decks").delete(workspaceKeyRange);
         transaction.objectStore("reviewEvents").delete(workspaceKeyRange);
 
         for (const card of content.cards) {
-          putCardInTransaction(transaction, workspaceId, card);
+          putCardSnapshotInTransaction(transaction, workspaceId, card);
         }
 
         for (const deck of content.decks) {

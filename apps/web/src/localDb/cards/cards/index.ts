@@ -948,13 +948,17 @@ export async function replaceCards(workspaceId: string, cards: ReadonlyArray<Car
       cardTagsStore.delete(workspaceKeyRange);
 
       for (const card of cards) {
-        cardsStore.put(toStoredCard(workspaceId, card));
-        putCardTagRecords(cardTagsStore, workspaceId, card);
+        putCardSnapshotInTransaction(transaction, workspaceId, card);
       }
 
       return deleteCardsRequest;
     });
   });
+}
+
+export function putCardSnapshotInTransaction(transaction: IDBTransaction, workspaceId: string, card: Card): void {
+  transaction.objectStore("cards").put(toStoredCard(workspaceId, card));
+  putCardTagRecords(transaction.objectStore("cardTags"), workspaceId, card);
 }
 
 export function putCardInTransaction(transaction: IDBTransaction, workspaceId: string, card: Card): void {

@@ -117,9 +117,8 @@ export async function readLocalWorkspaceBackupFile(file: File): Promise<LocalWor
   try {
     const objectValue = parseObject(document, endpoint, "");
     exportedAt = parseRequiredField(objectValue, "exportedAt", endpoint, "", parseString);
-    // Restore stores exportedAt as the last-saved time, and Settings formats it on every render.
     if (Number.isNaN(Date.parse(exportedAt))) {
-      return { kind: "damaged", fieldPath: "exportedAt" };
+      throw new ApiContractError(endpoint, "exportedAt", "a date");
     }
 
     content = {

@@ -337,8 +337,12 @@ export function runReadwrite<RequestResult>(
       fail(error);
       try {
         transaction.abort();
-      } catch {
-        // abort() throws InvalidStateError when the callback already finished the transaction.
+      } catch (abortError) {
+        if (abortError instanceof DOMException && abortError.name === "InvalidStateError") {
+          return;
+        }
+
+        throw abortError;
       }
 
       return;
