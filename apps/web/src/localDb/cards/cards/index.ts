@@ -18,6 +18,7 @@ import {
   type StoredCard,
 } from "../../core/database";
 import { encodeCursor, decodeCursor } from "../../core/queryShared";
+import { makeWorkspaceKeyRange } from "../../core/workspaceKeyRange";
 
 type CardCursorIndexName =
   | "workspaceId_createdAt_cardId"
@@ -120,11 +121,6 @@ function openIndexedCursor(
   options: IndexedCardCursorOptions,
 ): IDBRequest<IDBCursorWithValue | null> {
   return store.index(options.indexName).openCursor(options.keyRange, options.direction);
-}
-
-/** Compound-key range matching every key prefixed by `workspaceId`: lower `[workspaceId]` is shorter than any real key, and upper `[workspaceId, []]` exploits IDB's type ordering (Array > String/Number) to sort above every primitive second component. */
-function makeWorkspaceKeyRange(workspaceId: string): IDBKeyRange {
-  return IDBKeyRange.bound([workspaceId], [workspaceId, []]);
 }
 
 function makeWorkspaceDueAtMillisBeforeRange(workspaceId: string, dueAtMillisExclusive: number): IDBKeyRange {

@@ -302,21 +302,53 @@ export function runReadwrite<RequestResult>(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const transaction = database.transaction([...storeNames], "readwrite");
-    const request = callback(transaction);
+    let isSettled = false;
 
-    if (request !== null) {
-      request.onerror = () => {
-        reject(describeIndexedDbError("IndexedDB write request failed", request.error));
-      };
-    }
+    const fail = (error: unknown): void => {
+      if (isSettled) {
+        return;
+      }
+
+      isSettled = true;
+      reject(error);
+    };
 
     transaction.onerror = () => {
-      reject(describeIndexedDbError("IndexedDB transaction failed", transaction.error));
+      fail(describeIndexedDbError("IndexedDB transaction failed", transaction.error));
+    };
+
+    transaction.onabort = () => {
+      fail(describeIndexedDbError("IndexedDB transaction aborted", transaction.error));
     };
 
     transaction.oncomplete = () => {
+      if (isSettled) {
+        return;
+      }
+
+      isSettled = true;
       resolve();
     };
+
+    let request: IDBRequest<RequestResult> | null;
+    try {
+      request = callback(transaction);
+    } catch (error) {
+      fail(error);
+      try {
+        transaction.abort();
+      } catch {
+        // abort() throws InvalidStateError when the callback already finished the transaction.
+      }
+
+      return;
+    }
+
+    if (request !== null) {
+      request.onerror = () => {
+        fail(describeIndexedDbError("IndexedDB write request failed", request.error));
+      };
+    }
   });
 }
 
