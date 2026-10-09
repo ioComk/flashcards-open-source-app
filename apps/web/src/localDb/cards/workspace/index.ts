@@ -1,4 +1,6 @@
 import type {
+  Card,
+  Deck,
   ReviewEvent,
   SyncBootstrapEntry,
   WorkspaceSchedulerSettings,
@@ -15,6 +17,7 @@ import {
   type WorkspaceSettingsRecord,
   type WorkspaceSyncStateRecord,
 } from "../../core/database";
+import { makeWorkspaceKeyRange } from "../../core/workspaceKeyRange";
 import { putDeckInTransaction } from "../decks";
 import { loadProgressCacheState, markProgressCacheDirtyInTransaction } from "../../progress/progress";
 import { putReviewEventInTransaction } from "../../reviews/reviews";
@@ -28,6 +31,13 @@ type HotSyncStateUpdate = Readonly<{
 type ReviewHistorySyncStateUpdate = Readonly<{
   lastAppliedReviewSequenceId: number;
   markReviewHistoryHydrated: boolean;
+}>;
+
+export type PortableWorkspaceContent = Readonly<{
+  cards: ReadonlyArray<Card>;
+  decks: ReadonlyArray<Omit<Deck, "workspaceId">>;
+  reviewEvents: ReadonlyArray<Omit<ReviewEvent, "workspaceId">>;
+  schedulerSettings: WorkspaceSchedulerSettings | null;
 }>;
 
 function compareTagSummaries(
@@ -214,6 +224,47 @@ export async function applyHotSyncPage(
 
       return null;
     });
+  });
+}
+
+export async function replaceWorkspaceContent(
+  workspaceId: string,
+  content: PortableWorkspaceContent,
+): Promise<void> {
+  await closeDatabaseAfterWrite(async (database) => {
+    const progressCacheState = await loadProgressCacheState(database);
+
+    await runReadwrite(
+      database,
+      ["cards", "cardTags", "decks", "reviewEvents", "workspaceSettings", "meta"],
+      (transaction) => {
+        const workspaceKeyRange = makeWorkspaceKeyRange(workspaceId);
+        // Range deletes must precede every put: a later one would erase the cards written above it but not the tags writeCardTagRecords puts from its cursor callback.
+        transaction.objectStore("cards").delete(workspaceKeyRange);
+        transaction.objectStore("cardTags").delete(workspaceKeyRange);
+        transaction.objectStore("decks").delete(workspaceKeyRange);
+        transaction.objectStore("reviewEvents").delete(workspaceKeyRange);
+
+        for (const card of content.cards) {
+          putCardInTransaction(transaction, workspaceId, card);
+        }
+
+        for (const deck of content.decks) {
+          putDeckInTransaction(transaction, { ...deck, workspaceId });
+        }
+
+        for (const reviewEvent of content.reviewEvents) {
+          putReviewEventInTransaction(transaction, { ...reviewEvent, workspaceId });
+        }
+
+        if (content.schedulerSettings !== null) {
+          putWorkspaceSettingsInTransaction(transaction, workspaceId, content.schedulerSettings);
+        }
+
+        markProgressCacheDirtyInTransaction(transaction, progressCacheState?.timeZone ?? null);
+        return null;
+      },
+    );
   });
 }
 
